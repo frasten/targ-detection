@@ -148,7 +148,7 @@ IplImage * src;
 
 
 
-src= cvLoadImage("img/alfa-brera-2.jpg",0);
+src= cvLoadImage("img/Alfa-brera-2.jpg",0);
 	assert(src->depth== IPL_DEPTH_8U);
 
 	findPlate(src);
