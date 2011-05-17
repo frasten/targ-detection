@@ -79,9 +79,8 @@ IplImage * matchFilter(IplImage * img){
 void morphoProcess(IplImage * img, CvRect roi){
 	IplConvKernel * structuringElem;
 	cvSetImageROI(img,roi);
-	structuringElem= cvCreateStructuringElementEx(15,2,5,1,CV_SHAPE_RECT,0);
+	structuringElem= cvCreateStructuringElementEx(14,10,7,5,CV_SHAPE_RECT,0);
 	cvDilate(img,img,structuringElem,1);
-	cvErode(img,img,structuringElem,1);
 
 	cvErode(img,img,structuringElem,1);
 	cvDilate(img,img,structuringElem,1);
@@ -134,7 +133,7 @@ void findPlate(IplImage * img){
 	
 
 		
-morphoProcess(img,cvRect(maxloc.x,maxloc.y,180,48));
+morphoProcess(edge,cvRect(maxloc.x,maxloc.y,180,48));
 		
 	
 	cvShowImage("edg",edge);
@@ -143,14 +142,15 @@ morphoProcess(img,cvRect(maxloc.x,maxloc.y,180,48));
 
 
 //MASCHERA
-/*	for(i=0; i<img->width; i++)
+	for(i=0; i<img->width; i++)
 		for(j=0; j< img->height; j++)
-			if(cvGet2D(img,j,i).val[0]==0)
+			if(cvGet2D(edge,j,i).val[0]==0)
 				cvSet2D(img,j,i,cvScalar(255,0,0,0));
 
-*/		cvShowImage("edg",img);
+		cvShowImage("edg",img);
 //	cvShowImage("ed",img);
 	cvWaitKey(0);
+
 }
 
 
