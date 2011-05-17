@@ -78,15 +78,15 @@ IplImage * matchFilter(IplImage * img){
 
 void morphoProcess(IplImage * img, CvRect roi){
 	IplConvKernel * structuringElem;
-	//cvSetImageROI(img,roi);
-	structuringElem= cvCreateStructuringElementEx(18,6,5,1,CV_SHAPE_RECT,0);
+	cvSetImageROI(img,roi);
+	structuringElem= cvCreateStructuringElementEx(15,2,5,1,CV_SHAPE_RECT,0);
 	cvDilate(img,img,structuringElem,1);
 	cvErode(img,img,structuringElem,1);
 
 	cvErode(img,img,structuringElem,1);
 	cvDilate(img,img,structuringElem,1);
 	
-//	cvResetImageROI(img);
+	cvResetImageROI(img);
 
 
 }
@@ -101,26 +101,27 @@ void findPlate(IplImage * img){
 	/**/
 	double minval, maxval;
 	CvPoint maxloc, minloc;
+	int i,j;
 	/**/
 	edge= cvCreateImage(cvGetSize(img),IPL_DEPTH_32F,img->nChannels);
 	gauss= cvCreateImage(cvGetSize(img),IPL_DEPTH_32F,img->nChannels);
 	
 	verticalEdgeDetection(img,edge);
-	cvShowImage("edge",edge);
+//	cvShowImage("edge",edge);
 
 	gaussianFilter(edge,gauss);
-	cvShowImage("gauss",gauss);
+//	cvShowImage("gauss",gauss);
 
 
 	match=matchFilter(gauss);
-	cvShowImage("matchFilter",match);	
+//	cvShowImage("matchFilter",match);	
 
 	
 	cvMinMaxLoc( match, &minval, &maxval, &minloc, &maxloc, 0 );
 
 	cvRectangle( img, 
 				 cvPoint( maxloc.x, maxloc.y ), 
-				 cvPoint( maxloc.x+5, maxloc.y+5),
+				 cvPoint( maxloc.x+180, maxloc.y+48),
 				 cvScalar( 0, 0, 0, 0 ), 1, 0, 0 );
 
 
@@ -133,23 +134,78 @@ void findPlate(IplImage * img){
 	
 
 		
-morphoProcess(edge,cvRect(50,170,100,70));
+morphoProcess(img,cvRect(maxloc.x,maxloc.y,180,48));
 		
 	
 	cvShowImage("edg",edge);
-	cvShowImage("ed",img);
-	cvWaitKey(0);
+//	cvShowImage("ed",img);
+//	cvWaitKey(0);
 
+
+//MASCHERA
+/*	for(i=0; i<img->width; i++)
+		for(j=0; j< img->height; j++)
+			if(cvGet2D(img,j,i).val[0]==0)
+				cvSet2D(img,j,i,cvScalar(255,0,0,0));
+
+*/		cvShowImage("edg",img);
+//	cvShowImage("ed",img);
+	cvWaitKey(0);
 }
 
 
 int main(){
 IplImage * src;
-
-
-
-src= cvLoadImage("img/alfa-brera-2.jpg",0);
+	src= cvLoadImage("test/targa_piccola1.jpg",0);
 	assert(src->depth== IPL_DEPTH_8U);
-
 	findPlate(src);
+
+	cvWaitKey(0);
+
+	src= cvLoadImage("test/targa_piccola2.jpg",0);
+	assert(src->depth== IPL_DEPTH_8U);
+	findPlate(src);
+
+		cvWaitKey(0);
+
+	src= cvLoadImage("test/targa_piccola3.jpg",0);
+	assert(src->depth== IPL_DEPTH_8U);
+	findPlate(src);
+
+		cvWaitKey(0);
+
+	src= cvLoadImage("test/targa_media.jpg",0);
+	assert(src->depth== IPL_DEPTH_8U);
+	findPlate(src);
+
+			cvWaitKey(0);
+
+	src= cvLoadImage("test/targa_media2.jpg",0);
+	assert(src->depth== IPL_DEPTH_8U);
+	findPlate(src);
+
+			cvWaitKey(0);
+
+	src= cvLoadImage("test/targa_grande1.jpg",0);
+	assert(src->depth== IPL_DEPTH_8U);
+	findPlate(src);
+
+				cvWaitKey(0);
+
+	src= cvLoadImage("test/targa_grande2.jpg",0);
+	assert(src->depth== IPL_DEPTH_8U);
+	findPlate(src);
+
+				cvWaitKey(0);
+
+
+			cvWaitKey(0);
+
+	src= cvLoadImage("test/falso_positivo.jpg",0);
+	assert(src->depth== IPL_DEPTH_8U);
+	findPlate(src);
+
+	/*	src= cvLoadImage("test/targa_grande3.jpg",0);
+	assert(src->depth== IPL_DEPTH_8U);
+	findPlate(src);*/
 }
