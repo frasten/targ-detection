@@ -180,32 +180,4 @@ IplImage * src;
 
 			cvWaitKey(0);
 
-	src= cvLoadImage("test/targa_media2.jpg",0);
-	assert(src->depth== IPL_DEPTH_8U);
-	findPlate(src);
-
-			cvWaitKey(0);
-
-	src= cvLoadImage("test/targa_grande1.jpg",0);
-	assert(src->depth== IPL_DEPTH_8U);
-	findPlate(src);
-
-				cvWaitKey(0);
-
-	src= cvLoadImage("test/targa_grande2.jpg",0);
-	assert(src->depth== IPL_DEPTH_8U);
-	findPlate(src);
-
-				cvWaitKey(0);
-
-
-			cvWaitKey(0);
-
-	src= cvLoadImage("test/falso_positivo.jpg",0);
-	assert(src->depth== IPL_DEPTH_8U);
-	findPlate(src);
-
-	/*	src= cvLoadImage("test/targa_grande3.jpg",0);
-	assert(src->depth== IPL_DEPTH_8U);
-	findPlate(src);*/
 }
