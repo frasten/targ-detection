@@ -1,3 +1,4 @@
 # Escludiamo i files compilati
 PLATE_DETECTOR/*.o
 PLATE_DETECTOR/plate
+Thumbs.db
