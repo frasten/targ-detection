@@ -11,6 +11,7 @@ PERFEZIONAMENTI
 
 calcolare i valori delle threshold
 
+
 */
 
 void applyThreshold(IplImage * img , double th){
