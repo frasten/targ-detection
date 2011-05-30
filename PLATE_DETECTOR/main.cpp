@@ -18,8 +18,9 @@ int MaxHorzStraightLineDetection(IplImage * src, CvPoint * p1, CvPoint * p2);
 void elaboraImmagine(IplImage * img);
 double angle( CvPoint* pt1, CvPoint* pt2, CvPoint* pt0 );
 void threshold(IplImage * img, CvPoint * p);
+void setDimension(IplImage * img, int * height, int * width);
 void bonfa();
-//void ocr(char * imgPath);  //decommentare una volta installato tesseract
+
 
 
 void applyThreshold(IplImage * img , double th){
@@ -161,7 +162,7 @@ void findPlate(IplImage * img){
 		cvShowImage("edg",img);
 		cvSetImageROI(img,ROI);
 //	cvShowImage("ed",img);
-	cvWaitKey(0);
+	//cvWaitKey(0);
 
 }
 
@@ -172,11 +173,13 @@ int main(){
 	char* immagineIntermedia = "saved.tif";
 
 
-	img= cvLoadImage("test/targa_piccola1.jpg",0);
+	//img= cvLoadImage("test/targa_grande2.jpg",0);
+	//img= cvLoadImage("test/targa_media2.jpg",0);
+	img= cvLoadImage("test/targa_piccola3.jpg",0);
 	assert(img->depth== IPL_DEPTH_8U);
 	findPlate(img);
 
-
+	
 	elaboraImmagine(img);
 	cvShowImage("originale",img);
 	cvSaveImage(immagineIntermedia,img,0);
@@ -185,7 +188,7 @@ int main(){
 	printf("Passo l'immagine a Tesseract per l'ocr\n");
 	//ocr(immagineIntermedia);  //decommentare una volta installato tesseract
 
-	cvWaitKey(0);
+	
 	cvWaitKey(0);
 
 	
@@ -207,12 +210,28 @@ int MaxHorzStraightLineDetection(IplImage * src, CvPoint * p1, CvPoint * p2){
 	CvMemStorage * storage = cvCreateMemStorage(0);
 	
 	cvCanny(src,edge,250,250,3);
-	cvSobel(edge, horzEdge, 0, 1, 3);
-		
-	IplImage * edgeU = cvCreateImage(cvGetSize(src), IPL_DEPTH_8U, 1);
-	cvConvertScale(horzEdge,edgeU,IPL_DEPTH_32F/IPL_DEPTH_8U,0);
+	cvShowImage("edge",edge);
 	
-	lines = cvHoughLines2(edgeU, storage, CV_HOUGH_STANDARD, 10, CV_PI/360, edgeU->width/2, 0,0);
+	IplImage * edgeU = cvCreateImage(cvGetSize(src), IPL_DEPTH_8U, 1);
+	//cvConvertScale(horzEdge,edgeU,edge->depth/IPL_DEPTH_8U,0);
+	//cvCopy(edge,edgeU);
+	//cvShowImage("horzU",edgeU);
+
+	//cvConvertScale(edge,horzEdge,1,0);
+	//cvCopy(edge,horzEdge);
+
+	cvSobel(edge, horzEdge, 0, 1, 3);
+	cvShowImage("horzEdge",horzEdge);
+		
+	//IplImage * edgeU = cvCreateImage(cvGetSize(src), IPL_DEPTH_8U, 1);
+	cvConvertScale(horzEdge,edgeU,IPL_DEPTH_32F/IPL_DEPTH_8U,0);
+	cvShowImage("horzU",edgeU);
+	
+
+	IplImage * righe = cvCreateImage(cvGetSize(src), IPL_DEPTH_32F, 4);
+	lines = cvHoughLines2(edgeU, storage, CV_HOUGH_PROBABILISTIC , 8, CV_PI/1800, 10, 11,4);
+	//lines = cvHoughLines2(edgeU, storage, CV_HOUGH_PROBABILISTIC , 0.1, CV_PI/1800, 10, 11,4);
+	//lines = cvHoughLines2(edgeU, storage, CV_HOUGH_STANDARD , 0.01, 0.01, 1.5, 0,0);
 	for(int i=0;i<lines->total;i++){
 		CvPoint* line = (CvPoint*)cvGetSeqElem(lines,i);
 		double length = sqrt(pow(double(line[0].y-line[1].y),2)+pow(double(line[0].x-line[1].x),2));
@@ -220,7 +239,7 @@ int MaxHorzStraightLineDetection(IplImage * src, CvPoint * p1, CvPoint * p2){
 			maxLength = length;
 			countMaxLength = i;
 		}
-		cvLine(src,line[0],line[1],cvScalar(0,0,0,0),1,8,0);
+		cvLine(righe,line[0],line[1],cvScalar(255,255,255,255),1,8,0);
 	}
 	if (countMaxLength != -1){
 		CvPoint* line = (CvPoint*)cvGetSeqElem(lines,countMaxLength);
@@ -228,13 +247,20 @@ int MaxHorzStraightLineDetection(IplImage * src, CvPoint * p1, CvPoint * p2){
 		p1->y = line[0].y;
 		p2->x = line[1].x;
 		p2->y = line[1].y;
+		cvLine(righe,line[0],line[1],cvScalar(255,0,0,0),3,8,0);
+		cvShowImage("righe",righe);
+		//cvWaitKey(0);
 		return 1;
 	}
+	cvShowImage("righe",righe);
+	//cvWaitKey(0);
 	return 0;
 }
 
 /**Effettua l'elaborazione che precede l'ocr*/
 void elaboraImmagine(IplImage * img){
+	int height,width;
+	setDimension(img,&height,&width);
 	CvPoint * minPoint, * maxPoint;
 	minPoint = &cvPoint(-1,-1);
 	maxPoint = &cvPoint(-1,-1);
@@ -242,10 +268,12 @@ void elaboraImmagine(IplImage * img){
 		double angoloRotazione = pendenzaRetta(minPoint,maxPoint);
 		if(angoloRotazione != 0){
 			CvMat *mapMatrix = cvCreateMat(2,3, CV_32F);
-			cv2DRotationMatrix(cvPoint2D32f(((double) img->height)/2.0,((double) img->width)/2.0),angoloRotazione*180/CV_PI,1.0,mapMatrix);
+			//cv2DRotationMatrix(cvPoint2D32f(((double) img->height)/2.0,((double) img->width)/2.0),angoloRotazione*180/CV_PI,1.0,mapMatrix);
+			cv2DRotationMatrix(cvPoint2D32f(((double) width)/2.0,((double) height)/2.0),angoloRotazione*180/CV_PI,1.0,mapMatrix);
 			IplImage * rotated = cvCreateImage(cvGetSize(img),img->depth,img->nChannels);
 			cvWarpAffine(img, rotated, mapMatrix);
 			cvCopy(rotated,img,0);
+			//cvShowImage("ruotata",img);
 		}
 	}
 
@@ -285,6 +313,18 @@ void bonfa(){
 	printf("Passo l'immagine a Tesseract per l'ocr\n");
 	//ocr(immagineIntermedia);  //decommentare una volta installato tesseract
 
-	cvWaitKey(0);
+	//cvWaitKey(0);
 	exit(0);
+}
+
+/** Assegna a width e height passati come parametri i corrispettivi valori della ROI dell'immagine*/
+void setDimension(IplImage * img, int *height, int *width){
+	if (img->roi!=NULL) {
+		*height = img->roi->height;
+		*width = img->roi->width;
+		}
+	else {
+		*height = img->roi->height;
+		*width = img->roi->width;
+		}
 }
