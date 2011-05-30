@@ -107,7 +107,7 @@ void findPlate(IplImage * img){
 	gauss= cvCreateImage(cvGetSize(img),IPL_DEPTH_32F,img->nChannels);
 	
 	verticalEdgeDetection(img,edge);
-//	cvShowImage("edge",edge);
+	cvShowImage("edge",edge);
 
 	gaussianFilter(edge,gauss);
 //	cvShowImage("gauss",gauss);
@@ -148,7 +148,10 @@ morphoProcess(edge,cvRect(maxloc.x,maxloc.y,180,48));
 			if(cvGet2D(edge,j,i).val[0]==0)
 				cvSet2D(img,j,i,cvScalar(255,0,0,0));
 
-		cvShowImage("edg",img);
+		
+	
+	cvThreshold(img,img,150,255,CV_THRESH_TOZERO);
+	cvShowImage("edg",img);
 //	cvShowImage("ed",img);
 	cvWaitKey(0);
 
@@ -175,7 +178,7 @@ IplImage * src;
 
 		cvWaitKey(0);
 
-	src= cvLoadImage("test/targa_media.jpg",0);
+	src= cvLoadImage("test/targa_grande1.jpg",0);
 	assert(src->depth== IPL_DEPTH_8U);
 	findPlate(src);
 
