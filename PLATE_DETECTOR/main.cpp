@@ -288,4 +288,3 @@ void bonfa(){
 	cvWaitKey(0);
 	exit(0);
 }
-
