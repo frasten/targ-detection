@@ -6,12 +6,6 @@
 #include "cv.h"
 #include "highgui.h"
 
-//decommentare una volta installato tesseract
-//#include "stdafx.h"
-//#include "imgs.h"
-//#include "tessdll.h"
-//#include "unichar.h"
-
 /*
 PERFEZIONAMENTI
 
@@ -295,22 +289,3 @@ void bonfa(){
 	exit(0);
 }
 
-//decommentare una volta installato tesseract
-//void ocr(char * imgPath){
-//	IMAGE image;
-//	//Definizione della libreria API
-//	if (image.read_header(imgPath) < 0) {
-//		printf("Can't open %s\n", imgPath);
-//		exit(1);
-//	}
-//	if (image.read(image.get_ysize()) < 0) {
-//		printf("Can't read %s\n", imgPath);
-//		exit(1);
-//	}
-//	TessDllBeginPageUprightBPP(image.get_xsize(),image.get_ysize(),image.get_buffer(),"eng",image.get_bpp());
-//	ETEXT_DESC* output = TessDllRecognize_all_Words();
-//
-//
-//	for (int i = 0; i < output->count; i++)
-//		printf("%c\n",output->text[i].char_code);
-//}
