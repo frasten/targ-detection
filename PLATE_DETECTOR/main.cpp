@@ -16,7 +16,9 @@ PERFEZIONAMENTI
 
 calcolare i valori delle threshold
 */
+
 IplImage * plate_growing(IplImage * src, CvScalar * regionColor);
+
 double pendenzaRetta(CvPoint * p1, CvPoint * p2);
 double MaxHorzStraightLineDetection(IplImage * src);
 void elaboraImmagine(IplImage * img);
@@ -317,10 +319,9 @@ int cmpCornerTL(CvPoint2D32f pnt0,CvPoint2D32f pnt1,double m){
 			return 0;
 		else
 			return 1;
-	
 	}
-
 }
+
 
 int cmpCornerTR(CvPoint2D32f pnt0,CvPoint2D32f pnt1,double m){
 
@@ -494,7 +495,6 @@ void cleanPlate(IplImage * img){
 
 }
 
-
 int main(){
 	IplImage * img, * plate;
 
@@ -644,17 +644,15 @@ double MaxHorzStraightLineDetection(IplImage * src){
 	//CvMemStorage * storage = cvCreateMemStorage(0);
 	
 	cvCanny(src,edge,50,150,3);
-	//cvShowImage("edge",src);
-	
+
 	IplImage * edgeU = cvCreateImage(cvGetSize(src), IPL_DEPTH_8U, 1);
 	cvConvertScale(horzEdge,edgeU,edge->depth/IPL_DEPTH_8U,0);
 	
 	cvSobel(src, horzEdge, 0, 1, 3);
-//	cvShowImage("horzEdge",horzEdge);
+		
+
 		
 	cvConvertScale(horzEdge,edgeU,IPL_DEPTH_32F/IPL_DEPTH_8U,0);
-//	cvShowImage("horzU",edgeU);
-	
 
 	
 	
@@ -769,7 +767,7 @@ void disegnaRetteHR(IplImage * img,double *H, double *R, int count){
 				for(int i=0;i<img->height;i++)
 					cvSet2D(img,i,R[p]-rMax,cvRealScalar(255));	
 		}
-	//cvShowImage("rette",img);
+
 }
 
 /** Calcola M e Q delle count rette descritte dalle coppie H e R della trasformata di Hough 

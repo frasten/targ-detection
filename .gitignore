@@ -1,5 +1,7 @@
 # Escludiamo i files compilati
 PLATE_DETECTOR/*.o
 PLATE_DETECTOR/plate
-PATE_DETECTOR/main.c
 Thumbs.db
+
+/PLATE_DETECTOR/main.c
+/PLATE_DETECTOR/main.c
