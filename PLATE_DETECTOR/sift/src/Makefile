@@ -37,6 +37,7 @@ siftDemo: siftDemo.o sift.o xform.o utils.o kdtree.o minpq.o imgfeatures.o
 # $^: tutte le dipendenze
 %.o:: %.c
 	gcc $(BUILDFLAGS) -c -o $@ $<
+	mkdir -p $(BIN_DIR)
 
 
 clean:

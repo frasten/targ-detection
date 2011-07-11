@@ -13,14 +13,15 @@ docs:
 	doxygen Doxyfile
 
 libfeat.a:
+	mkdir -p $(LIB_DIR)
 	$(MAKE) -C $(SRC_DIR) -I $(INC_DIR) $@
 
 clean:
 	make -C $(SRC_DIR) $@;
 
 distclean: clean docsclean
-	rm -f $(LIB_DIR)/*
-	rm -f $(BIN_DIR)/*
+	rm -f $(LIB_DIR)
+	rm -f $(BIN_DIR)
 
 docsclean:
 	rm -rf $(DOC_DIR)/html/
