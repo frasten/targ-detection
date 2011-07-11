@@ -25,7 +25,7 @@
 
 /* threshold on squared ratio of distances between NN and 2nd NN */
 //#define NN_SQ_DIST_RATIO_THR 0.49
-#define NN_SQ_DIST_RATIO_THR 0.80
+#define NN_SQ_DIST_RATIO_THR 0.09
 //#define NN_SQ_DIST_RATIO_THR 0.64
 
 int feat_type = FEATURE_LOWE;
