@@ -1,3 +1,7 @@
 # File in cui vengono salvate le features estratte dall'immagine che
 # stiamo testando. (creato da 1-discover.php)
 test.sift
+
+# Directory in cui vengono salvate le features delle immagini del
+# database. Essendo dinamiche non le salviamo per ora.
+db/
