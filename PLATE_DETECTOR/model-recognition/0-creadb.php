@@ -21,7 +21,7 @@ define( 'DB_IMG_DIR', 'db_img_posteriore/' );
 if ( ! is_file( BIN_DIR . 'siftfeat' ) ) {
 	echo "Errore: mancano i file compilati. Assicurarsi di aver dato\n";
 	echo "`make` nella directory delle librerie SIFT.\n";
-	exit 1;
+	exit( 1 );
 }
 
 if ( ! is_dir( DB_DIR ) ) {
