@@ -52,7 +52,7 @@ for ( $t = $T_MIN; $t <= $T_MAX; $t += $DELTA_T ) {
 	fwrite( $handle, "\t[" . number_format( $t, 2 ) . ", $match[1]]$virgola\n" );
 	fclose( $handle );
 
-	echo "done.\n";
+	echo " done.\n";
 }
 
 // Footer del file JSON
