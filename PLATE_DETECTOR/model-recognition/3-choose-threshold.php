@@ -25,17 +25,15 @@ $log_file = 'grafici/threshold_values.json';
 // Carico il contenuto del file sorgente .c
 $src_content = file_get_contents( $src_file );
 
-// Prepariamo il file in formato JSON: ecco l'header:
-$handle = fopen( $log_file, 'w' );
-fwrite( $handle, "[\n" );
-fclose( $handle );
 
+$data = array(); // Dati JSON da scrivere successivamente
 for ( $t = $T_MIN; $t <= $T_MAX; $t += $DELTA_T ) {
+	$t = number_format( $t, 2 );
 	echo "Threshold: $t working...";
 
 	// Andiamo a modificare il file sorgente con questo valore di threshold
 	// Esempio: #define NN_SQ_DIST_RATIO_THR 0.78
-	$src_content = preg_replace( "/^(#define NN_SQ_DIST_RATIO_THR) .+$/m", "\\1 " . number_format( $t, 2 ), $src_content );
+	$src_content = preg_replace( "/^(#define NN_SQ_DIST_RATIO_THR) .+$/m", "\\1 $t", $src_content );
 	file_put_contents( $src_file, $src_content );
 
 	// COMPILO
@@ -47,18 +45,14 @@ for ( $t = $T_MIN; $t <= $T_MAX; $t += $DELTA_T ) {
 	preg_match( "/^VOTO TOTALE .+ (\d+)$/m", $output, $match );
 
 	// Aggiungo la votazione al file JSON
-	$handle = fopen( $log_file, 'a' );
-	$virgola = $t < $T_MAX ? ',' : '';
-	fwrite( $handle, "\t[" . number_format( $t, 2 ) . ", $match[1]]$virgola\n" );
-	fclose( $handle );
+	$data[] = array($t, $match[1]);
 
-	echo " done.\n";
+	echo " done. ($match[1])\n";
+	$t = floatval($t);
 }
 
-// Footer del file JSON
-$handle = fopen($log_file, 'a');
-fwrite($handle, "]\n");
-fclose($handle);
+// Scrivo il file JSON
+file_put_contents( $log_file, json_encode( $data ) );
 
 
 
