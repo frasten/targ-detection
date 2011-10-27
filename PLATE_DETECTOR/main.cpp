@@ -550,7 +550,7 @@ int main(){
 	IplImage * img, * plate;
 
 	char* immagineIntermedia = "saved.tif";
-	char * pathImg="test3/immagine (28).jpg";
+	char * pathImg="Nuove-Andrea/_DSC2379.jpg";
 
 	img= cvLoadImage(pathImg,1);
 	explain(img,pathImg);
