@@ -19,6 +19,7 @@
 
 #define VERBOSE 1
 
+
 /*
 PERFEZIONAMENTI
  
@@ -35,7 +36,6 @@ struct StackElem {
 struct Stack {
 	StackElem * top;
 } typedef Stack;
-
 
 
 IplImage * plate_growing(IplImage * src, CvScalar * regionColor, CvPoint plateCenter);
@@ -99,48 +99,55 @@ fgColor: colore del foreground
 bgColor: colore del background
 */
 void dynamicThreshold3Ch(IplImage * src ,IplImage * dst);
+char * impostaNomeFileOutput(char * input);
 
 
 
 int main(int argc, char *argv[]){
 	IplImage * img;
 
-	//char * pathImg="img/Alfa-Brera-2.jpg";//"Rinominate/crash/Immagine (7).jpg";
 	char *immagineIntermedia = "saved.tif";
-	char *nomeFile="targhe.txt"; 
-	char *preTarga="\n";
-	char *postTarga="\n";
+	char *preTarga="";
+	char *postTarga="";
 
-	if (argc==2){
-		char *percorsoImmagine=argv[1];
-		if(!(img= cvLoadImage(percorsoImmagine,1))){
-			printf("%s\n",percorsoImmagine);
-			printf("Error in Loading Image\n");
-			getchar();
-			exit(0);
+	if (argc > 1)
+		for (int j=1;j<argc;j++){
+			char *percorsoImmagine=argv[j];
+			ETEXT_DESC* targa = NULL;
+			char *nomeFile=impostaNomeFileOutput(argv[j]);
+			char * output;
+			if(!(img= cvLoadImage(percorsoImmagine,1)))
+				output="no input file";		
+			else {
+				output= impostaNomeOutput(argv[j]);
+				assert(img->depth== IPL_DEPTH_8U);
+				explain(img,percorsoImmagine);
+				try {
+					cleanPlate(img,output);
+					targa=ocr(output);
+				}
+				catch (...){
+				}
+				
+			}
+			scriviTargaSuFile(targa,nomeFile,"",postTarga);
+			explain(img,"");
 		}
-	
-		explain(img,percorsoImmagine);
-		char * output= impostaNomeOutput(argv[1]); 
-
-		assert(img->depth== IPL_DEPTH_8U);
-		cleanPlate(img,output);
-
-		ETEXT_DESC* targa=ocr(output);
-			if (targa==NULL){
-				printf("Impossibile trovare l'immagine  %s\n", output);
-				getchar();
-				exit(0);
-			}	
-
-		scriviTargaSuFile(targa,nomeFile,output,postTarga);
-		exit(0);	
-	}
 	else {
-		printf("ERROR: wrong parameters number\n");
+		printf("ERROR: not enough parameters\n");
 		getchar();
 		exit(0);
-	}
+	}	
+	exit(0);		
+}
+
+char * impostaNomeFileOutput(char * input){
+	char *output = (char *)malloc(sizeof(char)*(int)(strlen(input)-4));
+	strncpy(output, input, strlen(input)-4);
+	output[strlen(input)-4]='\0';
+	strcat(output,".txt");
+	return output;
+
 }
 
 char * impostaNomeOutput(char * input){
@@ -171,29 +178,24 @@ ETEXT_DESC* ocr(char * imgPath){
 
 
 int scriviTargaSuFile(ETEXT_DESC* targa, char *nomeFile,char *preTarga, char *postTarga){
+	printf("\nTarga: ");
+
+	FILE *file = fopen(nomeFile,"w");
 	
-	FILE *file = fopen(nomeFile,"a");
+		if (targa !=NULL){
+		for (int i = 0; i < targa->count; i++)
+			if (((targa->text[i].char_code)<='Z' && (targa->text[i].char_code)>='A') || ((targa->text[i].char_code)<='9' && (targa->text[i].char_code)>='0') ){
+				fprintf(file,"%c ",targa->text[i].char_code);
+				printf("%c",targa->text[i].char_code);
+			}
+		}
 	
-	if (file==NULL) {
-		//scrittura su stdout
-		printf(preTarga);
-		printf("\t");
-		for (int i = 0; i < targa->count; i++)
-			printf("%c ",targa->text[i].char_code);
-		printf(postTarga);
-		return 1;
-	}
-	else {
-		//scrittura su file
-		fprintf(file,preTarga);
-		fprintf(file,"\t");
-		for (int i = 0; i < targa->count; i++)
-			if (((targa->text[i].char_code)<='Z' && (targa->text[i].char_code)>='A') || ((targa->text[i].char_code)<='9' && (targa->text[i].char_code)>='0') )
-			fprintf(file,"%c ",targa->text[i].char_code);
-		fprintf(file,postTarga);
 		fclose(file);
+
+	printf("\n\n");
 		return 0;
-	}
+	
+
 }
 
 
@@ -329,7 +331,10 @@ CvPoint findPlate(IplImage * img){
 }
 
 
+
 void drawRect(IplImage * img, double m, double q, int verticale, double x){
+
+
 	int x0,y0,x1,y1;
 
 	
@@ -350,30 +355,9 @@ void drawRect(IplImage * img, double m, double q, int verticale, double x){
 
 	cvDrawLine(img,cvPoint(x0,y0),cvPoint(x1,y1),cvScalar(0,0,255,0),1,8,0);
 }
-/*
-double quantiPxNeri(IplImage * imgColor, double m, double q, int x0, int x1){
-	int x,y;
-	IplImage * img = cvCreateImage(cvGetSize(imgColor),imgColor->depth,imgColor->nChannels);
-	dynamicThreshold3Ch(imgColor,img);
-	CvScalar media=cvScalarAll(0);
-	double res=0;
-	CvScalar px;
-		
-	for(x=x0; x< x1; x++){
-		y= cvRound( m*x+q);
-		if(y>0 && y< img->height){
-			px=cvGet2D(img,y,x);
-			
-			if(px.val[0]<100)
-				res++;
-		}
-	}
-	
-	return res;
-}
-*/
 
 //vecchia versione
+
 double quantiPxNeri(IplImage * img, double m, double q, int x0, int x1){
 	int x,y;
 	
@@ -398,73 +382,7 @@ double quantiPxNeri(IplImage * img, double m, double q, int x0, int x1){
 	return var.val[0]+var.val[1]+var.val[2];
 }
 
-/*
-int cmpCornerTL(CvPoint2D32f pnt0,CvPoint2D32f pnt1,double m){
 
-	if(m>=0){
-		if(pnt0.y <pnt1.y)
-			return -1;
-		else
-			return 1;
-	}
-	else{
-		if(pnt0.x <pnt1.x)
-			return -1;
-		else
-			return 1;
-	}
-}
-
-
-int cmpCornerTR(CvPoint2D32f pnt0,CvPoint2D32f pnt1,double m){
-
-	if(m<0){
-		if(pnt0.y <pnt1.y)
-			return -1;
-		else
-			return 1;
-	}
-	else{
-		if(pnt0.x >pnt1.x)
-			return -1;
-		else
-			return 1;
-	}
-}
-
-
-int cmpCornerBL(CvPoint2D32f pnt0,CvPoint2D32f pnt1,double m){
-	if(m<0){
-		if(pnt0.y >pnt1.y)
-			return -1;
-		else
-			return 1;
-	}
-	else{
-		if(pnt0.x <pnt1.x)
-			return -1;
-		else
-			return 1;
-	}
-}
-
-
-int cmpCornerBR(CvPoint2D32f pnt0,CvPoint2D32f pnt1,double m){
-	if(m>0){
-		if(pnt0.y >pnt1.y)
-			return -1;
-		else
-			return 1;
-	}
-	else{
-		if(pnt0.x > pnt1.x)
-			return -1;
-		else
-			return 1;
-	}
-}
-
-*/
 int isGrigioScuro(CvScalar px){
 	double val=px.val[0];
 	if(val>210)
@@ -543,6 +461,7 @@ void cleanPlate(IplImage * img, char *imgName){
 		
 
 
+
 		if(i==0){
 			for(theta=45; theta<125; theta++){
 						
@@ -566,6 +485,7 @@ void cleanPlate(IplImage * img, char *imgName){
 						maxV=px.val[0];
 						maxP=cvPoint(theta,ro);
 					}
+
 				}
 			}
 
@@ -641,8 +561,6 @@ void cleanPlate(IplImage * img, char *imgName){
 			x1=xRetta[2]-j;
 
 		j--;
-		
-
 	}
 	while (quantiPxNeri(img,m[0],q[0]+j,x0,x1)>30);
 
@@ -707,16 +625,10 @@ void cleanPlate(IplImage * img, char *imgName){
 	cvSet(plateCleanBin,cvScalarAll(0),0);
 	cvSet(tmp,cvScalarAll(0),0);
 	
-	//threshold3Ch(plateClean,plateCleanTh,cvScalarAll(120),cvScalarAll(255),cvScalarAll(0));//RENDI DINAMICA
-	//explain(plateCleanTh,"Applico una soglia sui 3 canali, per evidenziare le lettere");
 
 	dynamicThreshold3Ch(plateClean,plateCleanTh);
 	explain(plateCleanTh,"Applico una soglia sui 3 canali, per evidenziare le lettere\nLa soglia è clacolata usando Otsu");
 
-	/*IplImage * temporanea = cvCreateImage(cvGetSize(plateClean),8,1);
-	dynamicThreshold3Ch(plateClean,temporanea,cvScalarAll(120),cvScalarAll(255),cvScalarAll(0));
-	cvShowImage("supertemp",temporanea);
-	cvWaitKey(0);*/
 
 	int x,y;
 	y= plateCleanTh->height/2;
@@ -1046,6 +958,7 @@ void explain(IplImage * img, char * msg){
 
 
 void dynamicThreshold3Ch(IplImage * src ,IplImage * dst){
+
 	IplImage *Rimg = cvCreateImage(cvGetSize(src),src->depth,1);
 	IplImage *Gimg = cvCreateImage(cvGetSize(src),src->depth,1);
 	IplImage *Bimg = cvCreateImage(cvGetSize(src),src->depth,1);
@@ -1060,35 +973,10 @@ void dynamicThreshold3Ch(IplImage * src ,IplImage * dst){
 	cvThreshold(Gimg,Gthresh,0,max, CV_THRESH_BINARY_INV | CV_THRESH_OTSU);
 	cvThreshold(Rimg,Rthresh,0,max, CV_THRESH_BINARY_INV | CV_THRESH_OTSU);
 
-	/*cvShowImage("primo canale",Rthresh);
-	cvShowImage("secondo canale",Gthresh);
-	cvShowImage("terzo canale",Bthresh);
-	cvWaitKey(0);*/
-	
+
 	IplImage *flt = cvCreateImage(cvGetSize(src),8,1);
-	//cvMerge(Bthresh,Gthresh,Rthresh,NULL,flt);
 	cvMul(Bthresh,Gthresh,flt);
 	cvMul(Rthresh,flt,flt);
-	/*cvShowImage("terzo canale",flt);
-	cvWaitKey(0);*/
-
+	
 	cvCopy(flt,dst);
-
-	/*IplImage *Rfiltered = cvCreateImage(cvGetSize(src),src->depth,1);
-	IplImage *Gfiltered = cvCreateImage(cvGetSize(src),src->depth,1);
-	IplImage *Bfiltered = cvCreateImage(cvGetSize(src),src->depth,1);
-	cvMul(Bimg,Bthresh,Bfiltered);
-	cvMul(Gimg,Gthresh,Gfiltered);
-	cvMul(Rimg,Rthresh,Rfiltered);
-
-	cvShowImage("primo canale",Rfiltered);
-	cvShowImage("secondo canale",Gfiltered);
-	cvShowImage("terzo canale",Bfiltered);
-	cvWaitKey(0);
-
-
-	cvMerge(Bfiltered,Gfiltered,Rfiltered,NULL,dst);
-	cvShowImage("dst",dst);
-	cvWaitKey(0);
-	printf("merged\n");*/
 }
