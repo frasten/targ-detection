@@ -1,6 +1,7 @@
 #include <math.h>
 
 #include <stdlib.h>
+#include <stdio.h>
 #include <string.h>
 
 #include "cv.h"
@@ -19,10 +20,11 @@
 
 #define VERBOSE 0
 
+
 /*
 PERFEZIONAMENTI
- 
-calcolare i valori delle threshold
+Deallocare la memoria per le stringhe outImg e nomeFile
+Gestire la deallocazione della memoria in caso di errore nell'esecuzione del sw
 */
 
 struct StackElem {
@@ -37,11 +39,10 @@ struct Stack {
 } typedef Stack;
 
 
-
-IplImage * plate_growing(IplImage * src, CvScalar * regionColor, CvPoint plateCenter);
+//IplImage * plate_growing(IplImage * src, CvScalar * regionColor, CvPoint plateCenter);
 int character_growing(IplImage * src, IplImage * map,CvPoint seed);
 void threshold(IplImage * img, CvPoint * p);
-void trovaContorno (IplImage * src, IplImage * dst , int position);
+void trovaContorno(IplImage * src, IplImage * dst , int position);
 void explain(IplImage * img, char * msg);
 
 /*
@@ -61,6 +62,8 @@ ETEXT_DESC* ocr(char * imgPath);
 
 /** Scrive la targa sull'output desiderato. Se output=NULL si usa lo stdout*/
 int scriviTargaSuFile(ETEXT_DESC* targa, char *nomeFile,char *preTarga, char *postTarga);
+/** Scrive la targa sull'output desiderato. Se output=NULL si usa lo stdout*/
+int scriviTargaSuFile(char* targa, char *nomeFile,char *preTarga, char *postTarga);
 void morphoProcess(IplImage * img);
 void cleanPlate(IplImage * img, char *imgName);
 IplImage* plate_growing(IplImage * src, CvScalar * regionColor, CvPoint plateCenter);
@@ -70,12 +73,8 @@ Stack * createStack();
 void push(Stack * stack, int x, int y);
 StackElem * pop(Stack * stack);
 int isGrigioScuro(CvScalar px);
-int cmpCornerBR(CvPoint2D32f pnt0,CvPoint2D32f pnt1,double m);
-int cmpCornerBL(CvPoint2D32f pnt0,CvPoint2D32f pnt1,double m);
-int cmpCornerTR(CvPoint2D32f pnt0,CvPoint2D32f pnt1,double m);
-int cmpCornerTL(CvPoint2D32f pnt0,CvPoint2D32f pnt1,double m);
 double quantiPxNeri(IplImage * img, double m, double q, int x0, int x1);
-void drawRect(IplImage * img, double m, double q);
+void drawRect(IplImage * img, double m, double q, int verticale, double x);
 CvPoint findPlate(IplImage * img);
 void closing(IplImage * img);
 IplImage * matchFilter(IplImage * img);
@@ -98,8 +97,9 @@ th: vettore che contiene per ogni canale la threshold
 fgColor: colore del foreground
 bgColor: colore del background
 */
-void dynamicThreshold3Ch(IplImage * src ,IplImage * dst, CvScalar th, CvScalar fgColor, CvScalar bgColor);
+void dynamicThreshold3Ch(IplImage * src ,IplImage * dst);
 char * impostaNomeFileOutput(char * input);
+
 
 
 int main(int argc, char *argv[]){
@@ -114,21 +114,24 @@ int main(int argc, char *argv[]){
 			char *percorsoImmagine=argv[j];
 			ETEXT_DESC* targa = NULL;
 			char *nomeFile=impostaNomeFileOutput(argv[j]);
-			char * output;
+			char * outImg;
 			if(!(img= cvLoadImage(percorsoImmagine,1)))
-				output="no input file";		
+				scriviTargaSuFile("no input file",nomeFile,"",postTarga);
 			else {
-				output= impostaNomeOutput(argv[j]);
+				outImg= impostaNomeOutput(argv[j]);
 				assert(img->depth== IPL_DEPTH_8U);
+				explain(img,percorsoImmagine);
 				try {
-					cleanPlate(img,output);
-					targa=ocr(output);
+					cleanPlate(img,outImg);
+					targa=ocr(outImg);
+					explain(img,"");
+					cvReleaseImage(&img);
+					scriviTargaSuFile(targa,nomeFile,"",postTarga);
+					TessDllRelease();
 				}
 				catch (...){
 				}
-				
 			}
-			scriviTargaSuFile(targa,nomeFile,"",postTarga);
 		}
 	else {
 		printf("ERROR: not enough parameters\n");
@@ -166,25 +169,39 @@ ETEXT_DESC* ocr(char * imgPath){
 		printf("Can't read %s\n", imgPath);
 		return NULL;
 	}
-
 	TessDllBeginPageUprightBPP(image.get_xsize(),image.get_ysize(),image.get_buffer(),"eng",image.get_bpp());
 	ETEXT_DESC* output = TessDllRecognize_all_Words();
+	image.destroy();
     return output;
 }
 
 
 int scriviTargaSuFile(ETEXT_DESC* targa, char *nomeFile,char *preTarga, char *postTarga){
+	printf("\nTarga: ");
+
 	FILE *file = fopen(nomeFile,"w");
 	
 		if (targa !=NULL){
 		for (int i = 0; i < targa->count; i++)
-			if (((targa->text[i].char_code)<='Z' && (targa->text[i].char_code)>='A') || ((targa->text[i].char_code)<='9' && (targa->text[i].char_code)>='0') )
-			fprintf(file,"%c ",targa->text[i].char_code);
+			if (((targa->text[i].char_code)<='Z' && (targa->text[i].char_code)>='A') || ((targa->text[i].char_code)<='9' && (targa->text[i].char_code)>='0') ){
+				fprintf(file,"%c ",targa->text[i].char_code);
+				printf("%c",targa->text[i].char_code);
+			}
 		}
 	
 		fclose(file);
+
+	printf("\n\n");
 		return 0;
-	
+}
+
+int scriviTargaSuFile(char* targa, char *nomeFile,char *preTarga, char *postTarga){
+	FILE *file = fopen(nomeFile,"w");
+	if (targa !=NULL){
+		fprintf(file,"%s ",targa);
+	}
+	fclose(file);
+	return 0;
 }
 
 
@@ -259,6 +276,9 @@ IplImage * matchFilter(IplImage * img){
 
 	cvConvertScale(match,match,1./500.,0);
 
+	cvReleaseImage(&tmpl8);
+	cvReleaseImage(&tmpl32F);
+
 	return match;
 }
 
@@ -268,6 +288,7 @@ void closing(IplImage * img){
 	structuringElem= cvCreateStructuringElementEx(3,3,1,1,CV_SHAPE_RECT,0);
 	cvErode(img,img,structuringElem,1);
 	cvDilate(img,img,structuringElem,1);
+	cvReleaseStructuringElement(&structuringElem);
 }
 
 
@@ -276,6 +297,7 @@ void morphoProcess(IplImage * img){
 	structuringElem= cvCreateStructuringElementEx(3,3,1,1,CV_SHAPE_RECT,0);
 	cvDilate(img,img,structuringElem,1);
 	cvErode(img,img,structuringElem,1);
+	cvReleaseStructuringElement(&structuringElem);
 }
 
 
@@ -316,22 +338,43 @@ CvPoint findPlate(IplImage * img){
 	
 	maxloc.x+= BOX_PLATE_WIDTH/2;
 	maxloc.y+= BOX_PLATE_HEIGTH/2;
+
+	cvReleaseImage(&explainImg);
+	cvReleaseImage(&match);
+	cvReleaseImage(&edge);
+	cvReleaseImage(&gauss);
+	cvReleaseImage(&imgGray);
+
 	return maxloc;
 }
 
 
-void drawRect(IplImage * img, double m, double q){
+
+void drawRect(IplImage * img, double m, double q, int verticale, double x){
+
+
 	int x0,y0,x1,y1;
 
-	x0=img->width/4;
-	x1= img->width/4*3;
+	
 
-	y0= m*x0 + q;
-	y1= m* x1 +q;
+	
+	if(!verticale){
+		x0=5;
+		x1= img->width-5;
+		y0= m*x0 + q;
+		y1= m* x1 +q;
+	}
+	else{
+		x0=x;
+		x1=x;
+		y0= img->height-5;
+		y1= 5;
+	}
 
 	cvDrawLine(img,cvPoint(x0,y0),cvPoint(x1,y1),cvScalar(0,0,255,0),1,8,0);
 }
 
+//vecchia versione
 
 double quantiPxNeri(IplImage * img, double m, double q, int x0, int x1){
 	int x,y;
@@ -355,72 +398,6 @@ double quantiPxNeri(IplImage * img, double m, double q, int x0, int x1){
 	}
 	
 	return var.val[0]+var.val[1]+var.val[2];
-}
-
-
-int cmpCornerTL(CvPoint2D32f pnt0,CvPoint2D32f pnt1,double m){
-
-	if(m>=0){
-		if(pnt0.y <pnt1.y)
-			return -1;
-		else
-			return 1;
-	}
-	else{
-		if(pnt0.x <pnt1.x)
-			return -1;
-		else
-			return 1;
-	}
-}
-
-
-int cmpCornerTR(CvPoint2D32f pnt0,CvPoint2D32f pnt1,double m){
-
-	if(m<0){
-		if(pnt0.y <pnt1.y)
-			return -1;
-		else
-			return 1;
-	}
-	else{
-		if(pnt0.x >pnt1.x)
-			return -1;
-		else
-			return 1;
-	}
-}
-
-
-int cmpCornerBL(CvPoint2D32f pnt0,CvPoint2D32f pnt1,double m){
-	if(m<0){
-		if(pnt0.y >pnt1.y)
-			return -1;
-		else
-			return 1;
-	}
-	else{
-		if(pnt0.x <pnt1.x)
-			return -1;
-		else
-			return 1;
-	}
-}
-
-
-int cmpCornerBR(CvPoint2D32f pnt0,CvPoint2D32f pnt1,double m){
-	if(m>0){
-		if(pnt0.y >pnt1.y)
-			return -1;
-		else
-			return 1;
-	}
-	else{
-		if(pnt0.x > pnt1.x)
-			return -1;
-		else
-			return 1;
-	}
 }
 
 
@@ -461,6 +438,8 @@ void cleanPlate(IplImage * img, char *imgName){
 
 	double  q[3];
 	double  m[3];
+	double  xRetta[3]; //per gestire le rette verticali
+	int verticale[3];
 	
 	for(i=0; i<3; i++){
 			
@@ -499,43 +478,88 @@ void cleanPlate(IplImage * img, char *imgName){
 		double maxV=0.0;
 		
 
-		for(theta=0; theta<180; theta++){
-					
-			for(ro=0; ro<hough->height; ro++){
-				px=cvGet2D(hough,ro,theta);
-			
-				if(px.val[0]>=maxV){
-					maxV=px.val[0];
-					maxP=cvPoint(theta,ro);
+
+
+		if(i==0){
+			for(theta=45; theta<125; theta++){
+						
+				for(ro=0; ro<hough->height; ro++){
+					px=cvGet2D(hough,ro,theta);
+				
+					if(px.val[0]>=maxV){
+						maxV=px.val[0];
+						maxP=cvPoint(theta,ro);
+					}
 				}
 			}
+		}
+		else{
+			for(theta=0; theta<45; theta++){
+						
+				for(ro=0; ro<hough->height; ro++){
+					px=cvGet2D(hough,ro,theta);
+				
+					if(px.val[0]>=maxV){
+						maxV=px.val[0];
+						maxP=cvPoint(theta,ro);
+					}
+
+				}
+			}
+
+			for(theta=125; theta<180; theta++){
+						
+				for(ro=0; ro<hough->height; ro++){
+					px=cvGet2D(hough,ro,theta);
+				
+					if(px.val[0]>=maxV){
+						maxV=px.val[0];
+						maxP=cvPoint(theta,ro);
+					}
+				}
+			}	
 		}
 		
 		
 		
 		HR(maxP.x,maxP.y-diag,contorno,&m[i],&q[i]);	
-		
-
+		xRetta[i]=maxP.y-diag;
+		if(maxP.x==0)
+			verticale[i]=1;
+		else
+			verticale[i]=0;
 
 		//explain
-		drawRect(explImg,m[i],q[i]);
+		drawRect(explImg,m[i],q[i],verticale[i],xRetta[i]);
 		explain(explImg,"Uso la trasformata hough per trovare le rette passanti per i bordi");
 		//end	
 
-		
+		cvReleaseImage(&hough);
+		cvReleaseImage(&dest);
+		cvReleaseImage(&contorno);
 	//FINE HOUGH
 	}
 	
 	//bottom left
-	srcPoint[1].x=((q[0]-q[1])/(m[1]-m[0]));;
-	srcPoint[1].y=m[0]*srcPoint[1].x+q[0];
+	if(!verticale[1]){
+		srcPoint[1].x=((q[0]-q[1])/(m[1]-m[0]));
+		srcPoint[1].y=m[0]*srcPoint[1].x+q[0];
+	}
+	else{
+		srcPoint[1].x=xRetta[1];
+		srcPoint[1].y=m[0]*srcPoint[1].x+q[0];
+	}
+
 
 	//bottom right
-	srcPoint[3].x=((q[0]-q[2])/(m[2]-m[0]));;
-	srcPoint[3].y=m[0]*srcPoint[3].x+q[0];
-	
-	
-	
+	if(!verticale[2]){
+		srcPoint[3].x=((q[0]-q[2])/(m[2]-m[0]));
+		srcPoint[3].y=m[0]*srcPoint[3].x+q[0];
+	}
+	else{
+		srcPoint[3].x=xRetta[2];
+		srcPoint[3].y=m[0]*srcPoint[3].x+q[0];
+	}
 	
 	//explain
 	cvDrawCircle(explImg,cvPoint(srcPoint[1].x,srcPoint[1].y),2,cvScalar(0,255,0,0),1,8,0);
@@ -546,27 +570,44 @@ void cleanPlate(IplImage * img, char *imgName){
 	j=-10;
 
 	do{	
-		x0=(srcPoint[1].y+j-q[1]-10)/m[1];
-		x1=(srcPoint[3].y+j-q[2]-10)/m[2];
-		j--;
+		if(!verticale[1])
+			x0=(srcPoint[1].y+j-q[1]-10)/m[1];
+		else
+			x0=xRetta[1]-j;
+		
+		if(!verticale[2])
+			x1=(srcPoint[3].y+j-q[2]-10)/m[2];
+		else
+			x1=xRetta[2]-j;
 
+		j--;
 	}
 	while (quantiPxNeri(img,m[0],q[0]+j,x0,x1)>30);
 
 	/**/
 
 	//top left
-	
-	srcPoint[0].x=((q[0]-q[1]+j)/(m[1]-m[0]));
-	srcPoint[0].y=m[0]*srcPoint[0].x+q[0]+j;
+	if(!verticale[1]){
+		srcPoint[0].x=((q[0]-q[1]+j)/(m[1]-m[0]));
+		srcPoint[0].y=m[0]*srcPoint[0].x+q[0]+j;
+	}
+	else{
+		srcPoint[0].x=xRetta[1];
+		srcPoint[0].y=m[0]*srcPoint[0].x+q[0]+j;
+	}
 	
 	//top right
-	srcPoint[2].x=((q[0]-q[2]+j)/(m[2]-m[0]));
-	srcPoint[2].y=m[0]*srcPoint[2].x+q[0]+j;
-
+	if(!verticale[2]){
+		srcPoint[2].x=((q[0]-q[2]+j)/(m[2]-m[0]));
+		srcPoint[2].y=m[0]*srcPoint[2].x+q[0]+j;
+	}
+	else{
+		srcPoint[2].x=xRetta[2];
+		srcPoint[2].y=m[0]*srcPoint[2].x+q[0]+j;
+	}
 
 	//explain
-	drawRect(explImg,m[0],q[0]+j);
+	drawRect(explImg,m[0],q[0]+j,0,0);
 	explain(explImg,"Scansiono la targa dal basso verso l'alto con una retta parallela al bordo inferiore\n Mi fermo quando la retta non contiene pixel neri,\ncioe' quando ho raggiunto il bordo superiore\n ");
 	
 	cvDrawCircle(explImg,cvPoint(srcPoint[0].x,srcPoint[0].y),2,cvScalar(0,255,0,0),1,8,0);
@@ -604,16 +645,10 @@ void cleanPlate(IplImage * img, char *imgName){
 	cvSet(plateCleanBin,cvScalarAll(0),0);
 	cvSet(tmp,cvScalarAll(0),0);
 	
-	//threshold3Ch(plateClean,plateCleanTh,cvScalarAll(120),cvScalarAll(255),cvScalarAll(0));//RENDI DINAMICA
-	//explain(plateCleanTh,"Applico una soglia sui 3 canali, per evidenziare le lettere");
 
-	dynamicThreshold3Ch(plateClean,plateCleanTh,cvScalarAll(120),cvScalarAll(255),cvScalarAll(0));
-	explain(plateCleanTh,"Applico una soglia sui 3 canali, per evidenziare le lettere");
+	dynamicThreshold3Ch(plateClean,plateCleanTh);
+	explain(plateCleanTh,"Applico una soglia sui 3 canali, per evidenziare le lettere\nLa soglia è clacolata usando Otsu");
 
-	/*IplImage * temporanea = cvCreateImage(cvGetSize(plateClean),8,1);
-	dynamicThreshold3Ch(plateClean,temporanea,cvScalarAll(120),cvScalarAll(255),cvScalarAll(0));
-	cvShowImage("supertemp",temporanea);
-	cvWaitKey(0);*/
 
 	int x,y;
 	y= plateCleanTh->height/2;
@@ -665,10 +700,21 @@ void cleanPlate(IplImage * img, char *imgName){
 
 	explain(plateCleanBin,"Elimino eventuali imperfezioni nella parte superiore e d inferiroe della targa\nOra l'immagine e' pronta per Tesseract");
 	
-	//plateCleanBin = preOCR(plateCleanBin);
-	/*cvShowImage("hehe",plateCleanBin);
-	cvWaitKey(0);*/
+	
 	cvSaveImage(imgName,plateCleanBin,0);
+
+	//libero la memoria per tutte le immagini a parte img
+	cvReleaseImage(&explImg);
+	cvReleaseImage(&edge);
+	cvReleaseImage(&plateClean);
+	cvReleaseImage(&imgBin);
+	cvReleaseImage(&plateCleanBin);
+	cvReleaseImage(&tmp);
+	cvReleaseImage(&plateCleanTh);
+	
+	//libero la memoria per tutti gli altri dati della libreria OpenCv usati nel metodo
+	cvReleaseMat(&map);
+
 }
 
 
@@ -779,11 +825,12 @@ int character_growing(IplImage * src, IplImage * map,CvPoint seed){
 		media.val[2]= ((media.val[2]*n)+ cvGet2D(src,px->x,px->y).val[2])/(double)(n+1);
 		n++;
 		ispeziona(src,px,daIspezionare,media,th,map,ispezionati);
-		
+		free(px);
 	}
 	
 	morphoProcess(map);
-
+	free(daIspezionare);
+	cvReleaseMat(&ispezionati);
 	return	 n;
 }
 
@@ -821,6 +868,7 @@ IplImage* plate_growing(IplImage * src, CvScalar * regionColor, CvPoint plateCen
 			media.val[2]= ((media.val[2]*n)+ cvGet2D(src,px->x,px->y).val[2])/(double)(n+1);
 			n++;
 			ispeziona(src,px,daIspezionare,media,th,map,ispezionati);
+			free(px);
 		}
 
 	}
@@ -828,7 +876,8 @@ IplImage* plate_growing(IplImage * src, CvScalar * regionColor, CvPoint plateCen
 	*regionColor= media;
 
 	morphoProcess(map);
-
+	free(daIspezionare);
+	cvReleaseMat(&ispezionati);
 	return	 map;
 
 }
@@ -942,7 +991,7 @@ void explain(IplImage * img, char * msg){
 }
 
 
-void dynamicThreshold3Ch(IplImage * src ,IplImage * dst, CvScalar th, CvScalar fgColor, CvScalar bgColor){
+void dynamicThreshold3Ch(IplImage * src ,IplImage * dst){
 	IplImage *Rimg = cvCreateImage(cvGetSize(src),src->depth,1);
 	IplImage *Gimg = cvCreateImage(cvGetSize(src),src->depth,1);
 	IplImage *Bimg = cvCreateImage(cvGetSize(src),src->depth,1);
@@ -957,9 +1006,19 @@ void dynamicThreshold3Ch(IplImage * src ,IplImage * dst, CvScalar th, CvScalar f
 	cvThreshold(Gimg,Gthresh,0,max, CV_THRESH_BINARY_INV | CV_THRESH_OTSU);
 	cvThreshold(Rimg,Rthresh,0,max, CV_THRESH_BINARY_INV | CV_THRESH_OTSU);
 
+
 	IplImage *flt = cvCreateImage(cvGetSize(src),8,1);
 	cvMul(Bthresh,Gthresh,flt);
 	cvMul(Rthresh,flt,flt);
 	
 	cvCopy(flt,dst);
+
+	cvReleaseImage(&Rimg);
+	cvReleaseImage(&Gimg);
+	cvReleaseImage(&Bimg);
+	cvReleaseImage(&Rthresh);
+	cvReleaseImage(&Gthresh);
+	cvReleaseImage(&Bthresh);
+	cvReleaseImage(&flt);
+
 }
