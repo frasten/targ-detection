@@ -18,7 +18,7 @@
 #define BOX_PLATE_HEIGTH 48
 #define PI 3.141592653589793
 
-#define VERBOSE 0
+#define VERBOSE 1
 
 
 /*
@@ -115,8 +115,10 @@ int main(int argc, char *argv[]){
 			ETEXT_DESC* targa = NULL;
 			char *nomeFile=impostaNomeFileOutput(argv[j]);
 			char * outImg;
-			if(!(img= cvLoadImage(percorsoImmagine,1)))
+			if(!(img= cvLoadImage(percorsoImmagine,1))){
+				printf("Immagine non trovata\n");			
 				scriviTargaSuFile("no input file",nomeFile,"",postTarga);
+			}
 			else {
 				outImg= impostaNomeOutput(argv[j]);
 				assert(img->depth== IPL_DEPTH_8U);
@@ -138,6 +140,7 @@ int main(int argc, char *argv[]){
 		getchar();
 		exit(0);
 	}	
+	cvWaitKey(0);
 	exit(0);		
 }
 
@@ -363,6 +366,7 @@ void drawRect(IplImage * img, double m, double q, int verticale, double x){
 		x1= img->width-5;
 		y0= m*x0 + q;
 		y1= m* x1 +q;
+
 	}
 	else{
 		x0=x;
@@ -370,6 +374,8 @@ void drawRect(IplImage * img, double m, double q, int verticale, double x){
 		y0= img->height-5;
 		y1= 5;
 	}
+
+	
 
 	cvDrawLine(img,cvPoint(x0,y0),cvPoint(x1,y1),cvScalar(0,0,255,0),1,8,0);
 }
@@ -382,10 +388,10 @@ double quantiPxNeri(IplImage * img, double m, double q, int x0, int x1){
 	CvScalar media=cvScalarAll(0);
 	CvScalar var=cvScalarAll(0);
 	CvScalar px;
-		
+	
 	for(x=x0; x< x1; x++){
 		y= cvRound( m*x+q);
-		if(y>0 && y< img->height){
+		if(y>0 && y< img->height && x>=0 && x< img->width){
 			px=cvGet2D(img,y,x);
 			
 			if(px.val[0]<100)
@@ -396,7 +402,6 @@ double quantiPxNeri(IplImage * img, double m, double q, int x0, int x1){
 				var.val[2]++;
 		}
 	}
-	
 	return var.val[0]+var.val[1]+var.val[2];
 }
 
@@ -564,13 +569,18 @@ void cleanPlate(IplImage * img, char *imgName){
 	//explain
 	cvDrawCircle(explImg,cvPoint(srcPoint[1].x,srcPoint[1].y),2,cvScalar(0,255,0,0),1,8,0);
 	cvDrawCircle(explImg,cvPoint(srcPoint[3].x,srcPoint[3].y),2,cvScalar(0,255,0,0),1,8,0);
-	explain(explImg,"Calcolo le intersezioni tra le rette per trovare gli angoli inferiori\n(Solo quelli inferiroi perche' non influenzati dall'ombra)");
+	explain(explImg,"Calcolo le intersezioni tra le rette per trovare gli angoli inferiori\n(Solo quelli inferiori perche' non influenzati dall'ombra)");
 
 	int x0,x1;
-	j=-10;
+	
+
+	double realWidthPlate=sqrt(pow(srcPoint[1].x-srcPoint[3].x,2)+pow(srcPoint[1].y-srcPoint[3].y,2));//width della targa trovata (non stimata)
+	double heightPlateStimato=realWidthPlate/5.0;	
+	j=-cvRound(heightPlateStimato/2.0);
 
 	do{	
 		if(!verticale[1])
+
 			x0=(srcPoint[1].y+j-q[1]-10)/m[1];
 		else
 			x0=xRetta[1]-j;
@@ -582,7 +592,8 @@ void cleanPlate(IplImage * img, char *imgName){
 
 		j--;
 	}
-	while (quantiPxNeri(img,m[0],q[0]+j,x0,x1)>30);
+	while (quantiPxNeri(img,m[0],q[0]+j,x0,x1)>30 && -j < 2* heightPlateStimato);
+
 
 	/**/
 
@@ -649,6 +660,7 @@ void cleanPlate(IplImage * img, char *imgName){
 	dynamicThreshold3Ch(plateClean,plateCleanTh);
 	explain(plateCleanTh,"Applico una soglia sui 3 canali, per evidenziare le lettere\nLa soglia è clacolata usando Otsu");
 
+	
 
 	int x,y;
 	y= plateCleanTh->height/2;
