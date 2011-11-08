@@ -18,7 +18,7 @@
 #define BOX_PLATE_HEIGTH 48
 #define PI 3.141592653589793
 
-#define VERBOSE 0
+#define VERBOSE 1
 
 
 /*
