@@ -402,6 +402,8 @@ double quantiPxNeri(IplImage * img, double m, double q, int x0, int x1){
 				var.val[2]++;
 		}
 	}
+
+	
 	return var.val[0]+var.val[1]+var.val[2];
 }
 
@@ -578,6 +580,19 @@ void cleanPlate(IplImage * img, char *imgName){
 	double heightPlateStimato=realWidthPlate/5.0;	
 	j=-cvRound(heightPlateStimato/2.0);
 
+/*debug*/
+	IplImage * imgT = cvCreateImage(cvGetSize(img),img->depth,img->nChannels);
+		cvCopyImage(img,imgT);
+	
+	/**/
+
+	int z=1;
+	int Z_MAX=5;//numero righe per calcolare thNeri
+	double pxNeri=0;
+	double thNeri=0;
+
+	double thNeriPerc=0.4;
+
 	do{	
 		if(!verticale[1])
 
@@ -591,8 +606,26 @@ void cleanPlate(IplImage * img, char *imgName){
 			x1=xRetta[2]-j;
 
 		j--;
+
+	
+	/*debug*/
+		
+	/*
+	drawRect(imgT,m[0],q[0]+j,0,0);
+	cvShowImage("a",imgT);
+	cvWaitKey(0);
+	*/
+
+	/*end debug*/
+
+		pxNeri=quantiPxNeri(img,m[0],q[0]+j,x0,x1);	
+		if(z<Z_MAX){
+			thNeri= ((thNeri *(z-1))+pxNeri)/z;
+		}
+		z++;
+
 	}
-	while (quantiPxNeri(img,m[0],q[0]+j,x0,x1)>30 && -j < 2* heightPlateStimato);
+	while (z<Z_MAX || (pxNeri >thNeri*thNeriPerc && -j < 2* heightPlateStimato));
 
 
 	/**/
@@ -668,8 +701,9 @@ void cleanPlate(IplImage * img, char *imgName){
 	for(x=0; x< plateCleanTh->width; x++){
 
 		if(cvGet2D(plateCleanBin,y,x).val[0]==0 && cvGet2D(plateCleanTh,y,x).val[0]>0){
-
-			if(character_growing(plateClean,tmp,cvPoint(x,y))>100){
+			int numBianchi=character_growing(plateClean,tmp,cvPoint(x,y));
+			//printf("%d\n",numBianchi);
+			if(numBianchi>100 && numBianchi < 400 ){
 				character_growing(plateClean,plateCleanBin,cvPoint(x,y));
 				//cvDrawCircle(plateCleanBin,cvPoint(x,y),2,cvScalar(123,0,0,0),1,8,0);
 				explain(plateCleanBin,"Utilizzo region growing per isolare i singoli caratteri");			
