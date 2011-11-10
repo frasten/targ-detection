@@ -56,6 +56,7 @@ int main( int argc, char** argv ) {
       feat = feat1 + i;
       k = kdtree_bbf_knn( kd_root, feat, 2, &nbrs, KDTREE_BBF_MAX_NN_CHKS );
       if( k == 2 ) {
+        // Controlla
           d0 = descr_dist_sq( feat, nbrs[0] );
           d1 = descr_dist_sq( feat, nbrs[1] );
           if( d0 < d1 * NN_SQ_DIST_RATIO_THR ) {
