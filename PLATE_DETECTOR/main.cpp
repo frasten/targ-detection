@@ -691,7 +691,7 @@ void cleanPlate(IplImage * img, char *imgName){
 	
 
 	dynamicThreshold3Ch(plateClean,plateCleanTh);
-	explain(plateCleanTh,"Applico una soglia sui 3 canali, per evidenziare le lettere\nLa soglia è clacolata usando Otsu");
+	explain(plateCleanTh,"Applico una soglia sui 3 canali, per evidenziare le lettere\nLa soglia e' calcolata usando Otsu");
 
 	
 
@@ -744,7 +744,7 @@ void cleanPlate(IplImage * img, char *imgName){
 	}
 	
 
-	explain(plateCleanBin,"Elimino eventuali imperfezioni nella parte superiore e d inferiroe della targa\nOra l'immagine e' pronta per Tesseract");
+	explain(plateCleanBin,"Elimino eventuali imperfezioni nella parte superiore ed inferiroe della targa\nOra l'immagine e' pronta per Tesseract");
 	
 	
 	cvSaveImage(imgName,plateCleanBin,0);
