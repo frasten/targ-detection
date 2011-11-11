@@ -280,6 +280,10 @@ IplImage * matchFilter(IplImage * img){
 	int matchDstWidth, matchDstHeigth;
 
 	tmpl8= cvLoadImage("tmpl.png",0);
+	if (! tmpl8 ) {
+		printf("Error: missing template file!\n");
+		exit(-1);
+	}
 	assert(tmpl8->depth== IPL_DEPTH_8U);
 	tmpl32F= cvCreateImage(cvGetSize(tmpl8),IPL_DEPTH_32F,1);
 	cvConvertScale(tmpl8,tmpl32F,1./255.,0);
