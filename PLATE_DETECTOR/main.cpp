@@ -160,7 +160,9 @@ int main(int argc, char *argv[]){
 }
 
 char * impostaNomeFileOutput(char * input){
-	char *output = (char *)malloc(sizeof(char)*(int)(strlen(input)-4));
+	// abc.jpg => abc.txt
+	// Quindi la dimensione e' la stessa (+1 carattere del '\0')
+	char *output = (char *)malloc(sizeof(char)*(int)(strlen(input) + 1));
 	strncpy(output, input, strlen(input)-4);
 	output[strlen(input)-4]='\0';
 	strcat(output,".txt");
@@ -168,7 +170,10 @@ char * impostaNomeFileOutput(char * input){
 }
 
 char * impostaNomeOutput(char * input){
-	char *output = (char *)malloc(sizeof(char)*(int)(strlen(input)-4));
+	// abc.jpg => abc_targa.tif
+	//    7            13
+	// Quindi la dimensione e' 6 caratteri in piu' (+1 carattere del '\0')
+	char *output = (char *)malloc(sizeof(char)*(int)(strlen(input)+6+1));
 	strncpy(output, input, strlen(input)-4);
 	output[strlen(input)-4]='\0';
 	strcat(output,"_targa.tif");
