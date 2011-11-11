@@ -153,7 +153,7 @@ int main(int argc, char *argv[]){
 	else {
 		printf("ERROR: not enough parameters\n");
 		getchar();
-		exit(0);
+		exit(1);
 	}	
 	// cvWaitKey(0);
 	exit(0);		
