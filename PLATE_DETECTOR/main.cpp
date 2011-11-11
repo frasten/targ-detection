@@ -1,3 +1,8 @@
+/*
+ * Per la compilazione sotto Linux:
+ * sudo apt-get install libcv-dev libhighgui-dev libcvaux-dev tesseract-ocr-dev
+ * */
+
 #include <math.h>
 
 #include <stdlib.h>
@@ -7,9 +12,15 @@
 #include "cv.h"
 #include "highgui.h"
 
-#include "stdafx.h"
 #include "imgs.h"
-#include "tessdll.h"
+
+#ifdef _MSC_VER
+	#include "stdafx.h"
+	#include "tessdll.h"
+#else // Per linux:
+	#include "ocrclass.h"
+#endif
+
 #include "unichar.h"
 #include "baseapi.h"
 
@@ -18,7 +29,7 @@
 #define BOX_PLATE_HEIGTH 48
 #define PI 3.141592653589793
 
-#define VERBOSE 1
+#define VERBOSE 0
 
 
 /*
@@ -57,8 +68,10 @@ void RH(int x, int y, IplImage * hough);
 void HR(int theta, int r , IplImage * img, double * m1, double * q1 );
 char * impostaNomeOutput(char * input);
 
+#ifdef _MSC_VER
 /**Effettua l'OCR dell'immagine passata come parametro*/
 ETEXT_DESC* ocr(char * imgPath);
+#endif
 
 /** Scrive la targa sull'output desiderato. Se output=NULL si usa lo stdout*/
 int scriviTargaSuFile(ETEXT_DESC* targa, char *nomeFile,char *preTarga, char *postTarga);
@@ -125,11 +138,13 @@ int main(int argc, char *argv[]){
 				explain(img,percorsoImmagine);
 				try {
 					cleanPlate(img,outImg);
+#ifdef _MSC_VER
 					targa=ocr(outImg);
 					explain(img,"");
 					cvReleaseImage(&img);
 					scriviTargaSuFile(targa,nomeFile,"",postTarga);
 					TessDllRelease();
+#endif
 				}
 				catch (...){
 				}
@@ -140,7 +155,7 @@ int main(int argc, char *argv[]){
 		getchar();
 		exit(0);
 	}	
-	cvWaitKey(0);
+	// cvWaitKey(0);
 	exit(0);		
 }
 
@@ -161,6 +176,7 @@ char * impostaNomeOutput(char * input){
 }
 
 
+#ifdef _MSC_VER
 ETEXT_DESC* ocr(char * imgPath){
 	IMAGE image;
 	//Definizione della libreria API
@@ -177,6 +193,7 @@ ETEXT_DESC* ocr(char * imgPath){
 	image.destroy();
     return output;
 }
+#endif
 
 
 int scriviTargaSuFile(ETEXT_DESC* targa, char *nomeFile,char *preTarga, char *postTarga){
