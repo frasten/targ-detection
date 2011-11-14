@@ -87,6 +87,8 @@ if ( $handle = opendir( $db_dir ) ) {
 			// Decido ora di pesare il numero di keypoints matchanti trovati.
 			// Metto una percentuale, e poi ne faccio la media.
 			$percent = 100 * $match_m[1] / max( $keypoints, $test_keypoints );
+			//$percent = 100 * $match_m[1] / $keypoints;
+			//$percent = 100 * $match_m[1] / $test_keypoints;
 
 			printf(" (%s%%)\n", str_pad( number_format( $percent, 2 ), 5, ' ', STR_PAD_LEFT ) );
 			$tot += $percent; // Sommo, e qui sotto dividero' per il numero di elementi
@@ -107,7 +109,7 @@ arsort( $votazioni );
 echo "== CLASSIFICA per [$testimg] ==\n";
 $posizione = 1;
 foreach ( $votazioni as $modello => $voto ) {
-	echo "$posizione) " . str_pad( $modello, 15, ' ', STR_PAD_RIGHT ) . number_format( $voto, 2 ) . "%\n";
+	echo "$posizione) " . str_pad( $modello, 22, ' ', STR_PAD_RIGHT ) . number_format( $voto, 2 ) . "%\n";
 	$posizione++;
 }
 

@@ -17,6 +17,10 @@ $T_MIN = 0.00;
 $T_MAX = 1.20;
 $DELTA_T = 0.01; // di quando far variare la threshold per ogni prova
 
+$T_MIN = 0.40;
+$T_MAX = 1.20;
+$DELTA_T = 0.03; // di quando far variare la threshold per ogni prova
+
 $src_file = '../sift/src/match_db.c';
 $log_file = 'grafici/threshold_values.json';
 

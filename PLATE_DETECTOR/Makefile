@@ -1,12 +1,12 @@
 # -isystem blabla: elimina i warnings per le librerie opencv
 WFLAGS=-Wall -Wextra -isystem /usr/include/opencv
 
-CFLAGS=-g $(shell pkg-config --cflags opencv) $(WFLAGS)
+CFLAGS=-g $(shell pkg-config --cflags opencv) -I/usr/include/tesseract $(WFLAGS) -I/usr/include/opencv2
 LIBS=$(shell pkg-config --libs opencv)
 # -lcvaux -lhighgui
-GCC=$(shell which gcc)
-SOURCES=$(shell ls *.c)
-OBJECTS=$(SOURCES:.c=.o)
+GCC=$(shell which g++)
+SOURCES=$(shell ls *.cpp)
+OBJECTS=$(SOURCES:.cpp=.o)
 EXECUTABLE=plate
 #V=1
 
@@ -26,10 +26,10 @@ all: $(EXECUTABLE)
 
 $(EXECUTABLE): $(OBJECTS)
 	$(P)LD
-	$(Q)$(GCC) $(LIBS) $(CFLAGS) -o $@ ${OBJECTS}
+	$(Q)$(GCC) ${OBJECTS} $(LIBS) $(CFLAGS) -o $@
 
 
-%.o:: %.c
+%.o:: %.cpp
 	$(P)CC
 	$(Q)$(GCC) $(CFLAGS) -c -o $@ $<
 
