@@ -144,12 +144,7 @@ int main(int argc, char *argv[]){
 					explain(img,"");
 					cvReleaseImage(&img);
 					scriviTargaSuFile(targa,nomeFile,"",postTarga);
-<<<<<<< HEAD
-					//TessDllRelease();
-=======
-					TessDllRelease();
 #endif
->>>>>>> c28b2a58172a9295f0ea9e7d2f359f9ddd337eb3
 				}
 				catch (...){
 					printf("UNKNOWN ERROR\n");
@@ -162,11 +157,6 @@ int main(int argc, char *argv[]){
 		getchar();
 		exit(1);
 	}	
-<<<<<<< HEAD
-	//cvWaitKey(0);
-=======
-	// cvWaitKey(0);
->>>>>>> c28b2a58172a9295f0ea9e7d2f359f9ddd337eb3
 	exit(0);		
 }
 
