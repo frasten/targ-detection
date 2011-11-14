@@ -14,11 +14,12 @@
 #include "baseapi.h"
 
 
+
 #define BOX_PLATE_WIDTH 180
 #define BOX_PLATE_HEIGTH 48
 #define PI 3.141592653589793
 
-#define VERBOSE 1
+#define VERBOSE 0
 
 
 /*
@@ -129,9 +130,11 @@ int main(int argc, char *argv[]){
 					explain(img,"");
 					cvReleaseImage(&img);
 					scriviTargaSuFile(targa,nomeFile,"",postTarga);
-					TessDllRelease();
+					//TessDllRelease();
 				}
 				catch (...){
+					printf("UNKNOWN ERROR\n");
+					getchar();
 				}
 			}
 		}
@@ -140,7 +143,7 @@ int main(int argc, char *argv[]){
 		getchar();
 		exit(0);
 	}	
-	cvWaitKey(0);
+	//cvWaitKey(0);
 	exit(0);		
 }
 
