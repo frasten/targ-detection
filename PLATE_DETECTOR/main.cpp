@@ -688,7 +688,16 @@ void cleanPlate(IplImage * img, char *imgName){
 
 
 	double plateWidth=  sqrtf(pow(srcPoint[0].x - srcPoint[2].x,2) +  pow(srcPoint[0].y -srcPoint[2].y,2));
-	
+
+	/* If the detected plate size is greater than 60% of the image size,
+	 * then it's probably wrong. */
+	if (plateWidth > 0.6 * img->width ||
+		(srcPoint[1].y-srcPoint[0].y) > 0.6 * img->height
+	) {
+		printf("Errore nel rilevamento della targa (troppo grande).\n");
+		exit(-1);
+	}
+
 	IplImage * plateClean= cvCreateImage(cvSize(plateWidth+2,srcPoint[1].y-srcPoint[0].y+2),img->depth,img->nChannels);
 	CvPoint2D32f dstPoint[4];
 	CvMat * map= cvCreateMat(3,3,CV_32F);
