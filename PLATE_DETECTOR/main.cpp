@@ -20,6 +20,8 @@
 
 #define VERBOSE 1
 
+//#define CHAR_GROWING 0
+
 
 /*
 PERFEZIONAMENTI
@@ -696,6 +698,8 @@ void cleanPlate(IplImage * img, char *imgName){
 	
 
 	int x,y;
+
+#ifdef CHAR_GROWING
 	y= plateCleanTh->height/2;
 	
 	for(x=0; x< plateCleanTh->width; x++){
@@ -711,6 +715,8 @@ void cleanPlate(IplImage * img, char *imgName){
 		}
 		
 	}
+
+#endif
 
 	for(x=0; x< plateCleanTh->width; x++){
 		for(y=0; y< plateCleanTh->height; y++){
@@ -917,6 +923,7 @@ IplImage* plate_growing(IplImage * src, CvScalar * regionColor, CvPoint plateCen
 			free(px);
 		}
 
+		printf("%d\n",n);
 	}
 					
 	*regionColor= media;
