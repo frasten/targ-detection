@@ -1,3 +1,8 @@
+/*
+ * Per la compilazione sotto Linux:
+ * sudo apt-get install libcv-dev libhighgui-dev libcvaux-dev tesseract-ocr-dev
+ * */
+
 #include <math.h>
 
 #include <stdlib.h>
@@ -7,18 +12,25 @@
 #include "cv.h"
 #include "highgui.h"
 
-#include "stdafx.h"
 #include "imgs.h"
-#include "tessdll.h"
+
+#ifdef _MSC_VER
+	#include "stdafx.h"
+	#include "tessdll.h"
+#else // Per linux:
+	#include "ocrclass.h"
+#endif
+
 #include "unichar.h"
 #include "baseapi.h"
+
 
 
 #define BOX_PLATE_WIDTH 180
 #define BOX_PLATE_HEIGTH 48
 #define PI 3.141592653589793
 
-#define VERBOSE 1
+#define VERBOSE 0
 
 //#define CHAR_GROWING 0
 
@@ -59,8 +71,10 @@ void RH(int x, int y, IplImage * hough);
 void HR(int theta, int r , IplImage * img, double * m1, double * q1 );
 char * impostaNomeOutput(char * input);
 
+#ifdef _MSC_VER
 /**Effettua l'OCR dell'immagine passata come parametro*/
 ETEXT_DESC* ocr(char * imgPath);
+#endif
 
 /** Scrive la targa sull'output desiderato. Se output=NULL si usa lo stdout*/
 int scriviTargaSuFile(ETEXT_DESC* targa, char *nomeFile,char *preTarga, char *postTarga);
@@ -127,27 +141,31 @@ int main(int argc, char *argv[]){
 				explain(img,percorsoImmagine);
 				try {
 					cleanPlate(img,outImg);
+#ifdef _MSC_VER
 					targa=ocr(outImg);
 					explain(img,"");
 					cvReleaseImage(&img);
 					scriviTargaSuFile(targa,nomeFile,"",postTarga);
-					TessDllRelease();
+#endif
 				}
 				catch (...){
+					printf("UNKNOWN ERROR\n");
+					getchar();
 				}
 			}
 		}
 	else {
 		printf("ERROR: not enough parameters\n");
 		getchar();
-		exit(0);
+		exit(1);
 	}	
-	cvWaitKey(0);
 	exit(0);		
 }
 
 char * impostaNomeFileOutput(char * input){
-	char *output = (char *)malloc(sizeof(char)*(int)(strlen(input)-4));
+	// abc.jpg => abc.txt
+	// Quindi la dimensione e' la stessa (+1 carattere del '\0')
+	char *output = (char *)malloc(sizeof(char)*(int)(strlen(input) + 1));
 	strncpy(output, input, strlen(input)-4);
 	output[strlen(input)-4]='\0';
 	strcat(output,".txt");
@@ -155,7 +173,10 @@ char * impostaNomeFileOutput(char * input){
 }
 
 char * impostaNomeOutput(char * input){
-	char *output = (char *)malloc(sizeof(char)*(int)(strlen(input)-4));
+	// abc.jpg => abc_targa.tif
+	//    7            13
+	// Quindi la dimensione e' 6 caratteri in piu' (+1 carattere del '\0')
+	char *output = (char *)malloc(sizeof(char)*(int)(strlen(input)+6+1));
 	strncpy(output, input, strlen(input)-4);
 	output[strlen(input)-4]='\0';
 	strcat(output,"_targa.tif");
@@ -163,6 +184,7 @@ char * impostaNomeOutput(char * input){
 }
 
 
+#ifdef _MSC_VER
 ETEXT_DESC* ocr(char * imgPath){
 	IMAGE image;
 	//Definizione della libreria API
@@ -179,6 +201,7 @@ ETEXT_DESC* ocr(char * imgPath){
 	image.destroy();
     return output;
 }
+#endif
 
 
 int scriviTargaSuFile(ETEXT_DESC* targa, char *nomeFile,char *preTarga, char *postTarga){
@@ -265,6 +288,10 @@ IplImage * matchFilter(IplImage * img){
 	int matchDstWidth, matchDstHeigth;
 
 	tmpl8= cvLoadImage("tmpl.png",0);
+	if (! tmpl8 ) {
+		printf("Error: missing template file!\n");
+		exit(-1);
+	}
 	assert(tmpl8->depth== IPL_DEPTH_8U);
 	tmpl32F= cvCreateImage(cvGetSize(tmpl8),IPL_DEPTH_32F,1);
 	cvConvertScale(tmpl8,tmpl32F,1./255.,0);
@@ -663,7 +690,16 @@ void cleanPlate(IplImage * img, char *imgName){
 
 
 	double plateWidth=  sqrtf(pow(srcPoint[0].x - srcPoint[2].x,2) +  pow(srcPoint[0].y -srcPoint[2].y,2));
-	
+
+	/* If the detected plate size is greater than 60% of the image size,
+	 * then it's probably wrong. */
+	if (plateWidth > 0.6 * img->width ||
+		(srcPoint[1].y-srcPoint[0].y) > 0.6 * img->height
+	) {
+		printf("Errore nel rilevamento della targa (troppo grande).\n");
+		exit(-1);
+	}
+
 	IplImage * plateClean= cvCreateImage(cvSize(plateWidth+2,srcPoint[1].y-srcPoint[0].y+2),img->depth,img->nChannels);
 	CvPoint2D32f dstPoint[4];
 	CvMat * map= cvCreateMat(3,3,CV_32F);
