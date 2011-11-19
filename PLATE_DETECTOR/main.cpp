@@ -32,6 +32,9 @@
 
 #define VERBOSE 0
 
+//#define CHAR_GROWING 0
+//#define USE_TESS_LIB
+
 
 /*
 PERFEZIONAMENTI
@@ -140,10 +143,12 @@ int main(int argc, char *argv[]){
 				try {
 					cleanPlate(img,outImg);
 #ifdef _MSC_VER
+#ifdef USE_TESS_LIB
 					targa=ocr(outImg);
 					explain(img,"");
 					cvReleaseImage(&img);
 					scriviTargaSuFile(targa,nomeFile,"",postTarga);
+#endif
 #endif
 				}
 				catch (...){
@@ -732,6 +737,8 @@ void cleanPlate(IplImage * img, char *imgName){
 	
 
 	int x,y;
+
+#ifdef CHAR_GROWING
 	y= plateCleanTh->height/2;
 	
 	for(x=0; x< plateCleanTh->width; x++){
@@ -748,6 +755,8 @@ void cleanPlate(IplImage * img, char *imgName){
 		
 	}
 
+#endif
+
 	for(x=0; x< plateCleanTh->width; x++){
 		for(y=0; y< plateCleanTh->height; y++){
 			if(cvGet2D(plateCleanTh,y,x).val[0]>0){
@@ -756,7 +765,139 @@ void cleanPlate(IplImage * img, char *imgName){
 		}
 	}
 
-	explain(plateCleanBin,"Unisco i risultati di region growing a quelli della soglia per perfezionare l'immagine");
+	//explain(plateCleanBin,"Unisco i risultati di region growing a quelli della soglia per perfezionare l'immagine");
+
+/*gestione ombra superiore*/
+	CvScalar px;
+	double r,g,b;
+	int c;
+	int bianchiConsecutivi;
+	int TH_BIANCHI_CONS=plateClean->width*0.15;
+	double TH_MEDIA_OMBRA=0.5;
+	int NUM_PX_MEDIA=plateClean->width*0.25;
+	int check=0;
+	int xxStart;
+	int n;
+	int xx;
+
+	for(y=plateClean->height/2; y>=0; y--){
+	
+		
+	
+	//debug
+/*	cvSet2D(plateCleanTh,y,0,cvScalarAll(123));
+	cvShowImage("W",plateCleanTh);
+	cvShowImage("WW",plateCleanBin);
+	cvWaitKey(0);
+*/	
+	r=0;	
+	g=0;
+	b=0;
+	bianchiConsecutivi=0;
+		check=0;
+		xxStart=0;
+		for(x=0; x< plateClean->width; x++)	{
+			if(cvGet2D(plateCleanBin,y,x).val[0]>0)
+				bianchiConsecutivi++;
+			if(cvGet2D(plateCleanBin,y,x).val[0]==0 || x==plateClean->width-1)
+				check=1;
+
+			
+			//DEBUG
+			/*
+			printf("%d %f\n",check,cvGet2D(plateCleanBin,y,x).val[0]);
+
+			if(check){
+				cvSet2D(plateClean,y,xxStart,cvScalar(0,255,0,0));
+				cvSet2D(plateClean,y,x,cvScalar(0,0,255,0));
+				cvShowImage("W",plateClean);
+				cvWaitKey(0);
+			}
+			*/
+			if(check && bianchiConsecutivi>TH_BIANCHI_CONS){
+				/*n=0;
+				for(xx=xxStart; xx< x; xx++)	{
+					px=cvGet2D(plateClean,y,xx);	
+					r+=px.val[0];
+					g+=px.val[1];
+					b+=px.val[2];
+					n++;	
+					
+				}
+				r/=n;
+				r*=TH_MEDIA_OMBRA;
+				g/=n;
+				g*=TH_MEDIA_OMBRA;
+				b/=n;
+				b*=TH_MEDIA_OMBRA;
+
+				printf("\n\nmedia %f %f %f",r,g,b);
+				*/
+				for(xx=xxStart; xx< x; xx++)	{
+
+				//
+				int xxx;
+				int xxxStart;
+				int xxxStop;
+				n=0;
+				xxxStart=((xx/NUM_PX_MEDIA))*NUM_PX_MEDIA;			
+				xxxStop=xxxStart+NUM_PX_MEDIA;
+
+				if(xxxStop>plateClean->width){
+					xxxStart-=(xxxStop-plateClean->width);
+					xxxStop=plateClean->width;				
+				}
+				
+				for(xxx=xxxStart; xxx< xxxStop; xxx++)	{
+					px=cvGet2D(plateClean,y,xxx);	
+					r+=px.val[0];
+					g+=px.val[1];
+					b+=px.val[2];
+					n++;	
+					
+				}
+				r/=n;
+				r*=TH_MEDIA_OMBRA;
+				g/=n;
+				g*=TH_MEDIA_OMBRA;
+				b/=n;
+				b*=TH_MEDIA_OMBRA;
+				
+				//
+					px=cvGet2D(plateClean,y,xx);	
+					c=0;
+					if(px.val[0]<r)
+						c++;
+					if(px.val[1]<g)
+						c++;
+					if(px.val[2]<b)
+						c++;
+					if(c>=2)
+						cvSet2D(plateCleanBin,y,xx,cvScalarAll(255));
+					else
+						cvSet2D(plateCleanBin,y,xx,cvScalarAll(0));
+
+//					printf("%f %f %f\n%f %f %f\n\n",r,g,b,px.val[0],px.val[1],px.val[2]);
+				}
+				/*
+					cvSet2D(plateCleanBin,y,0,cvScalarAll(123));
+					cvShowImage("W",plateCleanBin);
+					cvWaitKey(0);*/
+			}
+			if(check){
+				check=0;
+				bianchiConsecutivi=0;
+				xxStart=x;			
+			}
+		}
+
+		
+
+	
+	}
+	explain(plateCleanBin,"Pulisco la targa dall'ombra superiore");
+//	
+/**/
 
 	int found=0;
 
@@ -784,7 +925,9 @@ void cleanPlate(IplImage * img, char *imgName){
 	cvDilate(plateCleanBin,plateCleanBin,NULL,1);*/
 	explain(plateCleanBin,"Elimino eventuali imperfezioni nella parte superiore ed inferiroe della targa\nOra l'immagine e' pronta per Tesseract");
 	
-	
+//	morphoProcess(plateCleanBin);
+//	explain(plateCleanBin,"");
+
 	cvSaveImage(imgName,plateCleanBin,0);
 
 	//libero la memoria per tutte le immagini a parte img
