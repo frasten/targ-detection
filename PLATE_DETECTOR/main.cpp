@@ -779,7 +779,9 @@ void cleanPlate(IplImage * img, char *imgName){
 		}
 	}
 	
-
+	//Proviamo a passare con un erosione per pulire ulteriormente le righe bianche 
+	/*cvErode(plateCleanBin,plateCleanBin,NULL,1);
+	cvDilate(plateCleanBin,plateCleanBin,NULL,1);*/
 	explain(plateCleanBin,"Elimino eventuali imperfezioni nella parte superiore ed inferiroe della targa\nOra l'immagine e' pronta per Tesseract");
 	
 	
