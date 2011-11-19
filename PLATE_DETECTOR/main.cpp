@@ -33,8 +33,8 @@
 #define VERBOSE 0
 
 //#define CHAR_GROWING 0
-//#define USE_TESS_LIB
-
+#define USE_TESS_LIB
+//#define CRASH_SW
 
 /*
 PERFEZIONAMENTI
@@ -153,7 +153,7 @@ int main(int argc, char *argv[]){
 				}
 				catch (...){
 					printf("UNKNOWN ERROR\n");
-					getchar();
+					//getchar();
 				}
 			}
 		}
@@ -208,15 +208,16 @@ ETEXT_DESC* ocr(char * imgPath){
 
 
 int scriviTargaSuFile(ETEXT_DESC* targa, char *nomeFile,char *preTarga, char *postTarga){
-	printf("\nTarga: ");
+	//printf("\nTarga: ");
 
 	FILE *file = fopen(nomeFile,"w");
 	
 		if (targa !=NULL){
 		for (int i = 0; i < targa->count; i++)
-			if (((targa->text[i].char_code)<='Z' && (targa->text[i].char_code)>='A') || ((targa->text[i].char_code)<='9' && (targa->text[i].char_code)>='0') ){
+			if (((targa->text[i].char_code)<='Z' && (targa->text[i].char_code)>='A') || ((targa->text[i].char_code)<='9' && (targa->text[i].char_code)>='0') )
+			{
 				fprintf(file,"%c ",targa->text[i].char_code);
-				printf("%c",targa->text[i].char_code);
+//				printf("%c",targa->text[i].char_code);
 			}
 		}
 	
@@ -293,7 +294,11 @@ IplImage * matchFilter(IplImage * img){
 	tmpl8= cvLoadImage("tmpl.png",0);
 	if (! tmpl8 ) {
 		printf("Error: missing template file!\n");
+#ifdef CRASH_SW
 		exit(-1);
+#else
+		throw -1;
+#endif
 	}
 	assert(tmpl8->depth== IPL_DEPTH_8U);
 	tmpl32F= cvCreateImage(cvGetSize(tmpl8),IPL_DEPTH_32F,1);
@@ -700,7 +705,11 @@ void cleanPlate(IplImage * img, char *imgName){
 		(srcPoint[1].y-srcPoint[0].y) > 0.6 * img->height
 	) {
 		printf("Errore nel rilevamento della targa (troppo grande).\n");
+#ifdef CRASH_SW
 		exit(-1);
+#else
+		throw -1;
+#endif
 	}
 
 	IplImage * plateClean= cvCreateImage(cvSize(plateWidth+2,srcPoint[1].y-srcPoint[0].y+2),img->depth,img->nChannels);
