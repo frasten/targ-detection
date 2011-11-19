@@ -55,7 +55,7 @@ struct Stack {
 int character_growing(IplImage * src, IplImage * map,CvPoint seed);
 void threshold(IplImage * img, CvPoint * p);
 void trovaContorno(IplImage * src, IplImage * dst , int position);
-void explain(IplImage * img, char * msg);
+void explain(IplImage * img, const char * msg);
 
 /*
 dato un punto x y disegna la sinusoide accumulando il valore dei pixel nello spazio di Hough
@@ -75,9 +75,9 @@ ETEXT_DESC* ocr(char * imgPath);
 #endif
 
 /** Scrive la targa sull'output desiderato. Se output=NULL si usa lo stdout*/
-int scriviTargaSuFile(ETEXT_DESC* targa, char *nomeFile,char *preTarga, char *postTarga);
+int scriviTargaSuFile(ETEXT_DESC* targa, const char *nomeFile);
 /** Scrive la targa sull'output desiderato. Se output=NULL si usa lo stdout*/
-int scriviTargaSuFile(char* targa, char *nomeFile,char *preTarga, char *postTarga);
+int scriviTargaSuFile(const char* targa, const char *nomeFile);
 void morphoProcess(IplImage * img);
 void cleanPlate(IplImage * img, char *imgName);
 IplImage* plate_growing(IplImage * src, CvScalar * regionColor, CvPoint plateCenter);
@@ -119,19 +119,17 @@ char * impostaNomeFileOutput(char * input);
 int main(int argc, char *argv[]){
 	IplImage * img;
 
-	char *immagineIntermedia = "saved.tif";
-	char *preTarga="";
-	char *postTarga="";
-
 	if (argc > 1)
 		for (int j=1;j<argc;j++){
 			char *percorsoImmagine=argv[j];
+#ifdef _MSC_VER
 			ETEXT_DESC* targa = NULL;
+#endif
 			char *nomeFile=impostaNomeFileOutput(argv[j]);
 			char * outImg;
 			if(!(img= cvLoadImage(percorsoImmagine,1))){
 				printf("Immagine non trovata\n");			
-				scriviTargaSuFile("no input file",nomeFile,"",postTarga);
+				scriviTargaSuFile("no input file",nomeFile);
 			}
 			else {
 				outImg= impostaNomeOutput(argv[j]);
@@ -143,7 +141,7 @@ int main(int argc, char *argv[]){
 					targa=ocr(outImg);
 					explain(img,"");
 					cvReleaseImage(&img);
-					scriviTargaSuFile(targa,nomeFile,"",postTarga);
+					scriviTargaSuFile(targa,nomeFile);
 #endif
 				}
 				catch (...){
@@ -202,7 +200,7 @@ ETEXT_DESC* ocr(char * imgPath){
 #endif
 
 
-int scriviTargaSuFile(ETEXT_DESC* targa, char *nomeFile,char *preTarga, char *postTarga){
+int scriviTargaSuFile(ETEXT_DESC* targa, const char *nomeFile){
 	printf("\nTarga: ");
 
 	FILE *file = fopen(nomeFile,"w");
@@ -221,7 +219,7 @@ int scriviTargaSuFile(ETEXT_DESC* targa, char *nomeFile,char *preTarga, char *po
 		return 0;
 }
 
-int scriviTargaSuFile(char* targa, char *nomeFile,char *preTarga, char *postTarga){
+int scriviTargaSuFile(const char* targa, const char *nomeFile){
 	FILE *file = fopen(nomeFile,"w");
 	if (targa !=NULL){
 		fprintf(file,"%s ",targa);
@@ -412,7 +410,6 @@ void drawRect(IplImage * img, double m, double q, int verticale, double x){
 double quantiPxNeri(IplImage * img, double m, double q, int x0, int x1){
 	int x,y;
 	
-	CvScalar media=cvScalarAll(0);
 	CvScalar var=cvScalarAll(0);
 	CvScalar px;
 	
@@ -901,7 +898,7 @@ int character_growing(IplImage * src, IplImage * map,CvPoint seed){
 	n=0;
 	cvSet(ispezionati,cvScalar(-1,0,0,0),0);
 
-	while(px=pop(daIspezionare)){
+	while( (px=pop(daIspezionare)) ){
 		media.val[0]= ((media.val[0]*n)+ cvGet2D(src,px->x,px->y).val[0])/(double)(n+1);
 		media.val[1]= ((media.val[1]*n)+ cvGet2D(src,px->x,px->y).val[1])/(double)(n+1);
 		media.val[2]= ((media.val[2]*n)+ cvGet2D(src,px->x,px->y).val[2])/(double)(n+1);
@@ -944,7 +941,7 @@ IplImage* plate_growing(IplImage * src, CvScalar * regionColor, CvPoint plateCen
 		n=0;
 		cvSet(ispezionati,cvScalar(-1,0,0,0),0);
 					
-		while(px=pop(daIspezionare)){
+		while( (px=pop(daIspezionare)) ){
 			media.val[0]= ((media.val[0]*n)+ cvGet2D(src,px->x,px->y).val[0])/(double)(n+1);
 			media.val[1]= ((media.val[1]*n)+ cvGet2D(src,px->x,px->y).val[1])/(double)(n+1);
 			media.val[2]= ((media.val[2]*n)+ cvGet2D(src,px->x,px->y).val[2])/(double)(n+1);
@@ -1064,12 +1061,12 @@ void trovaContorno (IplImage * src, IplImage * dst , int position){
 	}
 }
 
-void explain(IplImage * img, char * msg){
-#if VERBOSE == 1
-	printf("%s\n",msg);
-	cvShowImage("Immagine Console", img);
-	cvWaitKey(0);
-#endif
+void explain(IplImage * img, const char * msg){
+	if (VERBOSE == 1) {
+		printf("%s\n",msg);
+		cvShowImage("Immagine Console", img);
+		cvWaitKey(0);
+	}
 }
 
 
