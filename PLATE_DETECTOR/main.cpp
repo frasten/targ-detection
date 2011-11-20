@@ -32,6 +32,9 @@
 
 #define VERBOSE 0
 
+//#define CHAR_GROWING 0
+#define USE_TESS_LIB
+//#define CRASH_SW
 
 /*
 PERFEZIONAMENTI
@@ -138,15 +141,17 @@ int main(int argc, char *argv[]){
 				try {
 					cleanPlate(img,outImg);
 #ifdef _MSC_VER
+#ifdef USE_TESS_LIB
 					targa=ocr(outImg);
 					explain(img,"");
 					cvReleaseImage(&img);
 					scriviTargaSuFile(targa,nomeFile);
 #endif
+#endif
 				}
 				catch (...){
 					printf("UNKNOWN ERROR\n");
-					getchar();
+					//getchar();
 				}
 			}
 		}
@@ -201,15 +206,16 @@ ETEXT_DESC* ocr(char * imgPath){
 
 
 int scriviTargaSuFile(ETEXT_DESC* targa, const char *nomeFile){
-	printf("\nTarga: ");
+	// printf("\nTarga: ");
 
 	FILE *file = fopen(nomeFile,"w");
 
 		if (targa !=NULL){
 		for (int i = 0; i < targa->count; i++)
-			if (((targa->text[i].char_code)<='Z' && (targa->text[i].char_code)>='A') || ((targa->text[i].char_code)<='9' && (targa->text[i].char_code)>='0') ){
+			if (((targa->text[i].char_code)<='Z' && (targa->text[i].char_code)>='A') || ((targa->text[i].char_code)<='9' && (targa->text[i].char_code)>='0') )
+			{
 				fprintf(file,"%c ",targa->text[i].char_code);
-				printf("%c",targa->text[i].char_code);
+//				printf("%c",targa->text[i].char_code);
 			}
 		}
 
@@ -286,7 +292,11 @@ IplImage * matchFilter(IplImage * img){
 	tmpl8= cvLoadImage("tmpl.png",0);
 	if (! tmpl8 ) {
 		printf("Error: missing template file!\n");
+#ifdef CRASH_SW
 		exit(-1);
+#else
+		throw -1;
+#endif
 	}
 	assert(tmpl8->depth== IPL_DEPTH_8U);
 	tmpl32F= cvCreateImage(cvGetSize(tmpl8),IPL_DEPTH_32F,1);
@@ -692,7 +702,11 @@ void cleanPlate(IplImage * img, char *imgName){
 		(srcPoint[1].y-srcPoint[0].y) > 0.6 * img->height
 	) {
 		printf("Errore nel rilevamento della targa (troppo grande).\n");
+#ifdef CRASH_SW
 		exit(-1);
+#else
+		throw -1;
+#endif
 	}
 
 	IplImage * plateClean= cvCreateImage(cvSize(plateWidth+2,srcPoint[1].y-srcPoint[0].y+2),img->depth,img->nChannels);
@@ -729,6 +743,8 @@ void cleanPlate(IplImage * img, char *imgName){
 
 
 	int x,y;
+
+#ifdef CHAR_GROWING
 	y= plateCleanTh->height/2;
 
 	for(x=0; x< plateCleanTh->width; x++){
@@ -745,6 +761,8 @@ void cleanPlate(IplImage * img, char *imgName){
 
 	}
 
+#endif
+
 	for(x=0; x< plateCleanTh->width; x++){
 		for(y=0; y< plateCleanTh->height; y++){
 			if(cvGet2D(plateCleanTh,y,x).val[0]>0){
@@ -753,7 +771,139 @@ void cleanPlate(IplImage * img, char *imgName){
 		}
 	}
 
-	explain(plateCleanBin,"Unisco i risultati di region growing a quelli della soglia per perfezionare l'immagine");
+	//explain(plateCleanBin,"Unisco i risultati di region growing a quelli della soglia per perfezionare l'immagine");
+
+/*gestione ombra superiore*/
+	CvScalar px;
+	double r,g,b;
+	int c;
+	int bianchiConsecutivi;
+	int TH_BIANCHI_CONS=plateClean->width*0.15;
+	double TH_MEDIA_OMBRA=0.5;
+	int NUM_PX_MEDIA=plateClean->width*0.25;
+	int check=0;
+	int xxStart;
+	int n;
+	int xx;
+
+	for(y=plateClean->height/2; y>=0; y--){
+	
+		
+	
+	//debug
+/*	cvSet2D(plateCleanTh,y,0,cvScalarAll(123));
+	cvShowImage("W",plateCleanTh);
+	cvShowImage("WW",plateCleanBin);
+	cvWaitKey(0);
+*/	
+	r=0;	
+	g=0;
+	b=0;
+	bianchiConsecutivi=0;
+		check=0;
+		xxStart=0;
+		for(x=0; x< plateClean->width; x++)	{
+			if(cvGet2D(plateCleanBin,y,x).val[0]>0)
+				bianchiConsecutivi++;
+			if(cvGet2D(plateCleanBin,y,x).val[0]==0 || x==plateClean->width-1)
+				check=1;
+
+			
+			//DEBUG
+			/*
+			printf("%d %f\n",check,cvGet2D(plateCleanBin,y,x).val[0]);
+
+			if(check){
+				cvSet2D(plateClean,y,xxStart,cvScalar(0,255,0,0));
+				cvSet2D(plateClean,y,x,cvScalar(0,0,255,0));
+				cvShowImage("W",plateClean);
+				cvWaitKey(0);
+			}
+			*/
+			if(check && bianchiConsecutivi>TH_BIANCHI_CONS){
+				/*n=0;
+				for(xx=xxStart; xx< x; xx++)	{
+					px=cvGet2D(plateClean,y,xx);	
+					r+=px.val[0];
+					g+=px.val[1];
+					b+=px.val[2];
+					n++;	
+					
+				}
+				r/=n;
+				r*=TH_MEDIA_OMBRA;
+				g/=n;
+				g*=TH_MEDIA_OMBRA;
+				b/=n;
+				b*=TH_MEDIA_OMBRA;
+
+				printf("\n\nmedia %f %f %f",r,g,b);
+				*/
+				for(xx=xxStart; xx< x; xx++)	{
+
+				//
+				int xxx;
+				int xxxStart;
+				int xxxStop;
+				n=0;
+				xxxStart=((xx/NUM_PX_MEDIA))*NUM_PX_MEDIA;			
+				xxxStop=xxxStart+NUM_PX_MEDIA;
+
+				if(xxxStop>plateClean->width){
+					xxxStart-=(xxxStop-plateClean->width);
+					xxxStop=plateClean->width;				
+				}
+				
+				for(xxx=xxxStart; xxx< xxxStop; xxx++)	{
+					px=cvGet2D(plateClean,y,xxx);	
+					r+=px.val[0];
+					g+=px.val[1];
+					b+=px.val[2];
+					n++;	
+					
+				}
+				r/=n;
+				r*=TH_MEDIA_OMBRA;
+				g/=n;
+				g*=TH_MEDIA_OMBRA;
+				b/=n;
+				b*=TH_MEDIA_OMBRA;
+				
+				//
+					px=cvGet2D(plateClean,y,xx);	
+					c=0;
+					if(px.val[0]<r)
+						c++;
+					if(px.val[1]<g)
+						c++;
+					if(px.val[2]<b)
+						c++;
+					if(c>=2)
+						cvSet2D(plateCleanBin,y,xx,cvScalarAll(255));
+					else
+						cvSet2D(plateCleanBin,y,xx,cvScalarAll(0));
+
+//					printf("%f %f %f\n%f %f %f\n\n",r,g,b,px.val[0],px.val[1],px.val[2]);
+				}
+				/*
+					cvSet2D(plateCleanBin,y,0,cvScalarAll(123));
+					cvShowImage("W",plateCleanBin);
+					cvWaitKey(0);*/
+			}
+			if(check){
+				check=0;
+				bianchiConsecutivi=0;
+				xxStart=x;			
+			}
+		}
+
+		
+
+	
+	}
+	explain(plateCleanBin,"Pulisco la targa dall'ombra superiore");
+//	
+/**/
 
 	int found=0;
 
@@ -777,8 +927,13 @@ void cleanPlate(IplImage * img, char *imgName){
 	}
 
 
+	//Proviamo a passare con un erosione per pulire ulteriormente le righe bianche 
+	/*cvErode(plateCleanBin,plateCleanBin,NULL,1);
+	cvDilate(plateCleanBin,plateCleanBin,NULL,1);*/
 	explain(plateCleanBin,"Elimino eventuali imperfezioni nella parte superiore ed inferiroe della targa\nOra l'immagine e' pronta per Tesseract");
 
+//	morphoProcess(plateCleanBin);
+//	explain(plateCleanBin,"");
 
 	cvSaveImage(imgName,plateCleanBin,0);
 
