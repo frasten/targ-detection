@@ -91,12 +91,12 @@ int main( int argc, char** argv ) {
 
 //  cvSaveImage( "out.jpg",stacked, 0);
 
-  //display_big_img( stacked, "Matches" );
+  display_big_img( stacked, "Matches" );
 
-  //cvWaitKey( 0 );
+  cvWaitKey( 0 );
 
 
-//  cvReleaseImage( &stacked );
+  cvReleaseImage( &stacked );
     cvReleaseImage( &img2 );
     kdtree_release( kd_root );
     free( feat1 );
