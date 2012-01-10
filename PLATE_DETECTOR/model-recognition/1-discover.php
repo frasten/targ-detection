@@ -16,6 +16,7 @@
 
 $bin_dir = '../sift/bin/'; // con slash finale
 $db_dir = 'db';
+$db_img_dir = 'db_img_posteriore';
 $sift_testfile = 'test.sift'; // File temporaneo contenente i keypoints
 
 
@@ -46,6 +47,7 @@ echo "== Immagine da testare: [$testimg] ==\n";
 echo "Ricavo le features dell'immagine da testare...";
 /* Ricaviamo i keypoints SIFT per la nostra immagine di test, e li
  * salviamo nel file $sift_testfile. */
+$testimg = escapeshellarg($testimg);
 $output = `$bin_dir/siftfeat -x -o $sift_testfile $testimg 2>&1`;
 preg_match("/Found (\d+) /m", $output, $match);
 $test_keypoints = $match[1];
@@ -53,6 +55,8 @@ echo " fatto.\n\n";
 
 // Controlliamo ogni modello nel database
 $votazioni = array();
+$votomax = 0;
+$imgmax = '';
 if ( $handle = opendir( $db_dir ) ) {
 	while ( false !== ( $modello = readdir( $handle ) ) ) {
 		if ( $modello == '.' || $modello == '..' ) continue;
@@ -65,6 +69,8 @@ if ( $handle = opendir( $db_dir ) ) {
 		$indexdata = file_get_contents( $indexfilename );
 		$indexdata = explode( "\n", $indexdata );
 		$index = array();
+		// Saltiamo i modelli per i quali abbiamo pochi samples
+		if (sizeof($indexdata) <= 2) continue;
 		foreach( $indexdata as $row ) {
 			$row = explode( "\t", $row );
 			$index[$row[0]] = $row[1];
@@ -78,15 +84,21 @@ if ( $handle = opendir( $db_dir ) ) {
 			// Facciamo il matching vero e proprio tra i due descriptors.
 			echo "  Testo il file $file...";
 			preg_match( "/^(.+).jpg$/", $file, $match );
-			//$output = `$bin_dir/match_db $db_dir/$modello/$match[1].sift $sift_testfile 2>&1`;
-			$output = `$bin_dir/match_db $sift_testfile $db_dir/$modello/$match[1].sift 2>&1`;
+			$output = `$bin_dir/match_db $db_dir/$modello/$match[1].sift $sift_testfile 2>&1`;
+			//$output = `$bin_dir/match_db $sift_testfile $db_dir/$modello/$match[1].sift 2>&1`;
 			echo " fatto.";
 
 			preg_match( "/Found (\d+) total matches/m", $output, $match_m );
 
 			// Decido ora di pesare il numero di keypoints matchanti trovati.
 			// Metto una percentuale, e poi ne faccio la media.
-			$percent = 100 * $match_m[1] / max( $keypoints, $test_keypoints );
+			// TODO: questo metodo evidentemente fa schifo.
+			$percent = 100 * $match_m[1] / min( $keypoints, $test_keypoints );
+			// Aggiorno eventualmente il voto massimo
+			if ($percent > $votomax) {
+				$votomax = $percent;
+				$imgmax = "$db_img_dir/$modello/$file";
+			}
 			//$percent = 100 * $match_m[1] / $keypoints;
 			//$percent = 100 * $match_m[1] / $test_keypoints;
 
@@ -113,6 +125,9 @@ foreach ( $votazioni as $modello => $voto ) {
 	$posizione++;
 }
 
+// Visualizziamo il best match:
+print "Visualizziamo il miglior match rilevato con l'immagine:\n $imgmax...\n";
+$output = `$bin_dir/match $imgmax $testimg 2>&1`;
 
 
 ?>
