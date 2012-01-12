@@ -15,6 +15,7 @@
 #include <opencv/cv.h>
 //#include <opencv/cxcore.h>
 #include <opencv/highgui.h>
+#define RANSAC 1
 
 //#include <stdio.h>
 
@@ -25,8 +26,8 @@
 
 /* threshold on squared ratio of distances between NN and 2nd NN */
 //#define NN_SQ_DIST_RATIO_THR 0.49
-#define NN_SQ_DIST_RATIO_THR 0.94
-//#define NN_SQ_DIST_RATIO_THR 0.64
+//#define NN_SQ_DIST_RATIO_THR 0.94
+#define NN_SQ_DIST_RATIO_THR 0.55
 
 int feat_type = FEATURE_LOWE;
 
@@ -73,20 +74,42 @@ int main( int argc, char** argv ) {
     IplImage* xformed;
     struct feature ** inliers;
     int n_inliers;
-    H = ransac_xform( feat1, n1, FEATURE_FWD_MATCH, lsq_homog, 4, 0.01, homog_xfer_err, 4.0, &inliers, &n_inliers );
+    H = ransac_xform( feat1, n1, FEATURE_FWD_MATCH, lsq_homog, 4, 0.01, homog_xfer_err, 8.0, &inliers, &n_inliers );
     if( H )
     {
-/*
-      xformed = cvCreateImage( cvGetSize( img2 ), IPL_DEPTH_8U, 3 );
-      cvWarpPerspective( img1, xformed, H, CV_INTER_LINEAR + CV_WARP_FILL_OUTLIERS, cvScalarAll( 0 ) );
-      cvNamedWindow( "Xformed", 1 );
-      cvShowImage( "Xformed", xformed );
-      cvWaitKey( 0 );
-      cvReleaseImage( &xformed );
-*/
+      if ( cvmGet( H, 1, 2 ) < 120.0 &&
+           cvmGet( H, 0, 2 ) < 120.0 &&
+           (
+            fabs(cvmGet( H, 0, 0)) >= 0.000001 ||
+            fabs(cvmGet( H, 0, 1)) >= 0.000001 ||
+            fabs(cvmGet( H, 1, 0)) >= 0.000001 ||
+            fabs(cvmGet( H, 1, 1)) >= 0.000001 ||
+            fabs(cvmGet( H, 2, 0)) >= 0.000001 ||
+            fabs(cvmGet( H, 2, 1)) >= 0.000001
+           )
+          ) {
+        // TROVATO
+        printf("RANSAC OK\n");
+        /*
+        xformed = cvCreateImage( cvGetSize( img2 ), IPL_DEPTH_8U, 3 );
+        cvWarpPerspective( img1, xformed, H, CV_INTER_LINEAR + CV_WARP_FILL_OUTLIERS, cvScalarAll( 0 ) );
+        cvNamedWindow( "Xformed", 1 );
+        cvShowImage( "Xformed", xformed );
+        cvWaitKey( 0 );
+        cvReleaseImage( &xformed );
+        */
+        printf("N. inliers: %d\n", n_inliers);
+      }
+      else {
+        // Trovato ma probabilmente la matrice di trasformazione e' sbagliata.
+        printf("RANSAC FAIL\n");
+      }
+
       cvReleaseMat( &H );
     }
-    printf("N. inliers: %d\n", n_inliers);
+    else {
+      printf("RANSAC FAIL\n");
+    }
   }
 #endif
 

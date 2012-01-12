@@ -24,7 +24,7 @@
 
 /* threshold on squared ratio of distances between NN and 2nd NN */
 //#define NN_SQ_DIST_RATIO_THR 0.49
-#define NN_SQ_DIST_RATIO_THR 0.77
+#define NN_SQ_DIST_RATIO_THR 0.55
 
 
 int main( int argc, char** argv )
@@ -39,7 +39,7 @@ int main( int argc, char** argv )
 
   if( argc != 3 )
     fatal_error( "usage: %s <img1> <img2>", argv[0] );
-  
+
   img1 = cvLoadImage( argv[1], 1 );
   if( ! img1 )
     fatal_error( "unable to load image from %s", argv[1] );
@@ -77,20 +77,20 @@ int main( int argc, char** argv )
   fprintf( stderr, "Found %d total matches\n", m );
   fprintf( stderr, "Totali modello: %d\n", n1 );
   fprintf( stderr, "Totali test: %d\n", n2 );
-  
+
   cvSaveImage( "out.jpg",stacked, 0);
-	
+
   display_big_img( stacked, "Matches" );
-	
+
   cvWaitKey( 0 );
 
-  /* 
+  /*
      UNCOMMENT BELOW TO SEE HOW RANSAC FUNCTION WORKS
-     
+
      Note that this line above:
-     
+
      feat1[i].fwd_match = nbrs[0];
-     
+
      is important for the RANSAC function to work.
   */
 
@@ -101,22 +101,50 @@ int main( int argc, char** argv )
     struct feature ** inliers;
     int n_inliers;
 
+//    H = ransac_xform( feat1, n1, FEATURE_FWD_MATCH, lsq_homog, 4, 0.01,
+//          homog_xfer_err, 8.0, &inliers, &n_inliers );
     H = ransac_xform( feat1, n1, FEATURE_FWD_MATCH, lsq_homog, 4, 0.01,
 		      homog_xfer_err, 8.0, &inliers, &n_inliers );
-    if( H )
+    if( H ) {
+    	printf("HO H\n");
+      int i, j;
+      for( i = 0; i < H->rows; i++ )
       {
-	printf("HO H\n");
-	xformed = cvCreateImage( cvGetSize( img2 ), IPL_DEPTH_8U, 3 );
-	cvWarpPerspective( img1, xformed, H, 
-			   CV_INTER_LINEAR + CV_WARP_FILL_OUTLIERS,
-			   cvScalarAll( 0 ) );
-	cvNamedWindow( "Xformed", 1 );
-	cvShowImage( "Xformed", xformed );
-	cvWaitKey( 0 );
-	cvReleaseImage( &xformed );
-	cvReleaseMat( &H );
+          for( j = 0; j < H->cols; j++ )
+          {
+              printf( "%f ",cvmGet( H, i, j ) );
+          }
+          printf( "\n" );
       }
-      printf("Ho %d inliers\n", n_inliers);
+
+      // Tipicamente questo valore e' alto
+      if ( cvmGet( H, 1, 2 ) < 120.0 &&
+           cvmGet( H, 0, 2 ) < 120.0 &&
+           (
+            fabs(cvmGet( H, 0, 0)) >= 0.000001 ||
+            fabs(cvmGet( H, 0, 1)) >= 0.000001 ||
+            fabs(cvmGet( H, 1, 0)) >= 0.000001 ||
+            fabs(cvmGet( H, 1, 1)) >= 0.000001 ||
+            fabs(cvmGet( H, 2, 0)) >= 0.000001 ||
+            fabs(cvmGet( H, 2, 1)) >= 0.000001
+           )
+          ) {
+        xformed = cvCreateImage( cvGetSize( img2 ), IPL_DEPTH_8U, 3 );
+        cvWarpPerspective( img1, xformed, H,
+               CV_INTER_LINEAR + CV_WARP_FILL_OUTLIERS,
+               cvScalarAll( 0 ) );
+        cvNamedWindow( "Xformed", 1 );
+        cvShowImage( "Xformed", xformed );
+        cvWaitKey( 0 );
+        cvReleaseImage( &xformed );
+      }
+      else {
+        printf("H trovata, ma probabilmente e' sbagliata.\n");
+      }
+
+    	cvReleaseMat( &H );
+    }
+    printf("Ho %d inliers\n", n_inliers);
   }
 
   cvReleaseImage( &stacked );
@@ -127,3 +155,13 @@ int main( int argc, char** argv )
   free( feat2 );
   return 0;
 }
+
+/*
+Votazione sul numero di inliers finali dopo la ricerca di H.
+Scegliere il modello con il MAX assoluto di voto.
+Dove il voto è il numero di inliers finali rapportato al numero di features
+presenti.
+TODO: mettere ransac anche sull'altro coso.
+
+
+*/

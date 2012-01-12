@@ -55,7 +55,7 @@ echo " fatto.\n\n";
 
 // Controlliamo ogni modello nel database
 $votazioni = array();
-$votomax = 0;
+$votomax = array();
 $imgmax = '';
 if ( $handle = opendir( $db_dir ) ) {
 	while ( false !== ( $modello = readdir( $handle ) ) ) {
@@ -79,25 +79,36 @@ if ( $handle = opendir( $db_dir ) ) {
 		// Leggiamo i vari files
 		echo "* Modello: $modello\n";
 		$tot = 0;
+		$votomax[$modello] = 0;
+		$imgmax[$modello] = null;
 		foreach ( $index as $file => $keypoints ) {
 
 			// Facciamo il matching vero e proprio tra i due descriptors.
 			echo "  Testo il file $file...";
-			preg_match( "/^(.+).jpg$/", $file, $match );
+			preg_match( "/^(.+).jpg$/i", $file, $match );
 			$output = `$bin_dir/match_db $db_dir/$modello/$match[1].sift $sift_testfile 2>&1`;
 			//$output = `$bin_dir/match_db $sift_testfile $db_dir/$modello/$match[1].sift 2>&1`;
 			echo " fatto.";
 
-			preg_match( "/Found (\d+) total matches/m", $output, $match_m );
+			if ( preg_match("/RANSAC OK/m", $output) ) {
+				preg_match("/inliers: (\d+)$/m", $output, $inliers_match);
+				echo "Inliers: $inliers_match[1]\n";
+				$percent = 100 * $inliers_match[1] / min( $keypoints, $test_keypoints );
+				$percent = 100 * $inliers_match[1] / $keypoints;
+			}
+			else {
+				$percent = 0;
+			}
+			//preg_match( "/Found (\d+) total matches/m", $output, $match_m );
 
 			// Decido ora di pesare il numero di keypoints matchanti trovati.
 			// Metto una percentuale, e poi ne faccio la media.
 			// TODO: questo metodo evidentemente fa schifo.
-			$percent = 100 * $match_m[1] / min( $keypoints, $test_keypoints );
+			//$percent = 100 * $match_m[1] / min( $keypoints, $test_keypoints );
 			// Aggiorno eventualmente il voto massimo
-			if ($percent > $votomax) {
-				$votomax = $percent;
-				$imgmax = "$db_img_dir/$modello/$file";
+			if ($percent > $votomax[$modello]) {
+				$votomax[$modello] = $percent;
+				$imgmax[$modello] = "$db_img_dir/$modello/$file";
 			}
 			//$percent = 100 * $match_m[1] / $keypoints;
 			//$percent = 100 * $match_m[1] / $test_keypoints;
@@ -116,18 +127,33 @@ if ( $handle = opendir( $db_dir ) ) {
 }
 
 
+if (array_sum($votazioni) == 0) {
+	echo "Riconoscimento fallito.\n";
+	exit;
+}
 
 arsort( $votazioni );
 echo "== CLASSIFICA per [$testimg] ==\n";
 $posizione = 1;
+$vincitore = null;
 foreach ( $votazioni as $modello => $voto ) {
-	echo "$posizione) " . str_pad( $modello, 22, ' ', STR_PAD_RIGHT ) . number_format( $voto, 2 ) . "%\n";
+	if ($voto == 0) continue;
+	echo "$posizione) " . str_pad( $modello, 26, ' ', STR_PAD_RIGHT ) . number_format( $voto, 2 ) . "%\n";
+	if ($posizione == 1) $vincitore = $modello;
 	$posizione++;
 }
 
-// Visualizziamo il best match:
-print "Visualizziamo il miglior match rilevato con l'immagine:\n $imgmax...\n";
-$output = `$bin_dir/match $imgmax $testimg 2>&1`;
 
+$INTERACTIVE = ! in_array('--batch', $argv);
+
+// Visualizziamo il best match:
+if ($INTERACTIVE) {
+	/* TODO: devo in realta' mostrare il miglior match all'interno dei match
+	della posizione 1. */
+
+	print "Visualizziamo il miglior match rilevato con l'immagine:\n $imgmax[$vincitore]...\n";
+	$output = `$bin_dir/match $imgmax[$vincitore] $testimg 2>&1`;
+	echo $output;
+}
 
 ?>
