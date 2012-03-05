@@ -36,6 +36,7 @@
 #define USE_TESS_LIB
 //#define CRASH_SW
 
+//#define USE_CV_CANNY 1
 /*
 PERFEZIONAMENTI
 Deallocare la memoria per le stringhe outImg e nomeFile
@@ -268,6 +269,14 @@ void threshold3Ch(IplImage * src ,IplImage * dst, CvScalar th, CvScalar fgColor,
 
 
 void verticalEdgeDetection(IplImage * src, IplImage * dst){
+#ifdef USE_CV_CANNY
+
+	IplImage * edge= cvCreateImage(cvGetSize(src),IPL_DEPTH_8U,1);
+	cvCanny(src,edge,200,200);
+	cvConvertScale(edge, dst, 1);
+
+#else
+	//solo vertical edge
 	double th;
 	th=200;
 
@@ -275,6 +284,9 @@ void verticalEdgeDetection(IplImage * src, IplImage * dst){
 	cvAbs(dst,dst);
 
 	applyThreshold(dst,th);
+
+	//fine solo verticali
+#endif
 }
 
 void gaussianFilter(IplImage * src, IplImage * dst){
@@ -347,6 +359,8 @@ CvPoint findPlate(IplImage * img){
 	CvPoint maxloc, minloc;
 
 	/**/
+
+
 	edge= cvCreateImage(cvGetSize(img),IPL_DEPTH_32F,1);
 	gauss= cvCreateImage(cvGetSize(img),IPL_DEPTH_32F,1);
 	imgGray= cvCreateImage(cvGetSize(img),IPL_DEPTH_8U,1);
